@@ -29,9 +29,9 @@ class WeatherApp:
         self.root = root
         self.root.title("Tommy's Weather App")
         self.root.geometry("950x580")
-        self.root.resizable(False, False)           
-        self.root.configure(bg="#6db3f2")                   
-        
+        self.root.resizable(True, True)
+        self.root.configure(bg="#6db3f2")
+
 
         #
         # Initialize variables
@@ -40,8 +40,8 @@ class WeatherApp:
 
         # Define fonts
         self.large_font = font.Font(family="Helvetica", size=44, weight="bold")
-        self.medium_font = font.Font(family="Helvetica", size=18)
-        self.small_font = font.Font(family="Helvetica", size=12)
+        self.medium_font = font.Font(family="Helvetica", size=18,)
+        self.small_font = font.Font(family="Helvetica", size=16, weight="bold")
 
         # --- Search bar and buttons ---
         search_frame = tk.Frame(self.root, bg="#31618a")
@@ -94,7 +94,7 @@ class WeatherApp:
 
     def create_temperature_section(self):
         temp_frame = tk.Frame(self.root, bg="#6db3f2")  # Changed from "#4a90e2"
-        temp_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=30, pady=10)
+        temp_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=50, pady=10)
         temp_frame.grid_columnconfigure(0, weight=1)
         temp_frame.grid_columnconfigure(1, weight=1)
 
@@ -106,7 +106,7 @@ class WeatherApp:
 
     def create_conditions_section(self):
         conditions_frame = tk.Frame(self.root, bg="#6db3f2")  # Changed from "#31618a"
-        conditions_frame.grid(row=3, column=0, columnspan=2, sticky="nsew", padx=30, pady=10)
+        conditions_frame.grid(row=3, column=0, columnspan=2, sticky="nsew", padx=50, pady=10)
         conditions_frame.grid_columnconfigure(0, weight=1)
         conditions_frame.grid_columnconfigure(1, weight=1)
 
@@ -117,7 +117,7 @@ class WeatherApp:
         self.wind_label.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
 
     def create_forecast_section(self):
-        self.forecast_frame = tk.Frame(self.root, bg="#4a90e2")
+        self.forecast_frame = tk.Frame(self.root, bg="#6db3f2")
         self.forecast_frame.grid(row=4, column=0, columnspan=2, sticky="nsew", padx=30, pady=10)  # Changed from row=3 to row=4
         for i in range(5):
             self.forecast_frame.grid_columnconfigure(i, weight=1)
