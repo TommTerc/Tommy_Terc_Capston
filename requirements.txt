@@ -1,0 +1,23 @@
+# HTTP requests library for API calls
+requests>=2.28.0
+
+# Environment variables management
+python-dotenv>=0.19.0
+
+# Date and time utilities (built-in, but specifying for clarity)
+# datetime - built-in module
+
+# Database and file handling (built-in modules)
+# sqlite3 - built-in module
+# csv - built-in module
+# json - built-in module
+# os - built-in module
+
+# GUI framework (built-in with Python, but may need separate install on some systems)
+# tkinter - built-in module (may need python3-tk on Linux)
+
+# Collections utilities (built-in)
+# collections - built-in module
+
+# Enum support (built-in)
+# enum - built-in module
