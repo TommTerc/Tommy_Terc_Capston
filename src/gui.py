@@ -65,6 +65,7 @@ class WeatherApp:
         self.create_temperature_section()
         self.create_conditions_section()
         self.create_forecast_section()
+        self.right_frame_utilities()  # Add this line
 
     def create_main_weather_display(self):
         main_frame = tk.Frame(self.root, bg="#6db3f2")
@@ -154,73 +155,7 @@ class WeatherApp:
         return day_label, icon_label, temp_label
     
 
-
-    def right_frame_utilities(self):
-        main_frame = tk.Frame(self.root, bg="#6db3f2")
-        main_frame.grid(row=1, column=2, columnspan=2, sticky="nsew", padx=10, pady=10)  # Changed from row=0 to row=1
-        main_frame.grid_columnconfigure(0, weight=1)
-
-        # Precipitation card
-        precip_frame = tk.Frame(main_frame, bg="#2c2c2c", relief="solid", bd=1)
-        precip_frame.pack(fill="x", pady=(0, 5))
-        
-        tk.Label(precip_frame, text="💧 PRECIPITATION", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").pack(anchor="w", padx=10, pady=(8, 0))
-        self.precip_label = tk.Label(precip_frame, text='0"', font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
-        self.precip_label.pack(anchor="w", padx=10)
-        tk.Label(precip_frame, text="Today", font=("Helvetica", 12), bg="#2c2c2c", fg="white").pack(anchor="w", padx=10)
-        self.precip_next_label = tk.Label(precip_frame, text="Next expected is .6\" Sun.", font=("Helvetica", 11), bg="#2c2c2c", fg="white")
-        self.precip_next_label.pack(anchor="w", padx=10, pady=(0, 8))
-
-        # Feels like card
-        feels_frame = tk.Frame(main_frame, bg="#2c2c2c", relief="solid", bd=1)
-        feels_frame.pack(fill="x", pady=5)
-        
-        tk.Label(feels_frame, text="🌡️ FEELS LIKE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").pack(anchor="w", padx=10, pady=(8, 0))
-        self.feels_like_label = tk.Label(feels_frame, text="74°", font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
-        self.feels_like_label.pack(anchor="w", padx=10)
-        tk.Label(feels_frame, text="Wind is making it feel cooler.", font=("Helvetica", 11), bg="#2c2c2c", fg="white").pack(anchor="w", padx=10, pady=(0, 8))
-
-        # Pressure card
-        pressure_frame = tk.Frame(main_frame, bg="#2c2c2c", relief="solid", bd=1)
-        pressure_frame.pack(fill="x", pady=5)
-        
-        tk.Label(pressure_frame, text="🔘 PRESSURE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").pack(anchor="w", padx=10, pady=(8, 0))
-        
-        gauge_frame = tk.Frame(pressure_frame, bg="#2c2c2c")
-        gauge_frame.pack(fill="x", padx=10, pady=5)
-        
-        self.pressure_label = tk.Label(gauge_frame, text="29.98\ninHg", font=("Helvetica", 18, "bold"), bg="#2c2c2c", fg="white", justify="center")
-        self.pressure_label.pack()
-        
-        tk.Label(pressure_frame, text="Low                    High", font=("Helvetica", 10), bg="#2c2c2c", fg="white").pack(padx=10, pady=(0, 8))
-
-        # Averages card
-        averages_frame = tk.Frame(main_frame, bg="#2c2c2c", relief="solid", bd=1)
-        averages_frame.pack(fill="x", pady=(5, 0))
-        
-        tk.Label(averages_frame, text="📊 AVERAGES", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").pack(anchor="w", padx=10, pady=(8, 0))
-        self.avg_temp_label = tk.Label(averages_frame, text="+14°", font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
-        self.avg_temp_label.pack(anchor="w", padx=10)
-        tk.Label(averages_frame, text="above average daily high", font=("Helvetica", 11), bg="#2c2c2c", fg="white").pack(anchor="w", padx=10)
-        
-        # Today/Average comparison
-        comparison_frame = tk.Frame(averages_frame, bg="#2c2c2c")
-        comparison_frame.pack(fill="x", padx=10, pady=(5, 0))
-        
-        today_frame = tk.Frame(comparison_frame, bg="#2c2c2c")
-        today_frame.pack(fill="x")
-        tk.Label(today_frame, text="Today", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").pack(side="left")
-        self.today_high_label = tk.Label(today_frame, text="H:96°", font=("Helvetica", 10), bg="#2c2c2c", fg="white")
-        self.today_high_label.pack(side="right")
-        
-        avg_frame = tk.Frame(comparison_frame, bg="#2c2c2c")
-        avg_frame.pack(fill="x", pady=(0, 8))
-        tk.Label(avg_frame, text="Average", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").pack(side="left")
-        self.avg_high_label = tk.Label(avg_frame, text="H:82°", font=("Helvetica", 10), bg="#2c2c2c", fg="white")
-        self.avg_high_label.pack(side="right")
-
     
-
 
     def get_weather(self):
         # Fetch weather and forecast for the entered city
@@ -420,6 +355,74 @@ class WeatherApp:
         # Close button
         close_btn = tk.Button(button_frame, text="Close", command=favorites_window.destroy, font=self.small_font)
         close_btn.pack(side=tk.LEFT, padx=5)
+
+    def right_frame_utilities(self):
+        # Create right frame that spans alongside the main content
+        right_frame = tk.Frame(self.root, bg="#6db3f2")
+        right_frame.grid(row=1, column=2, rowspan=4, sticky="nsew", padx=(0, 10), pady=10)
+        right_frame.grid_rowconfigure(0, weight=1)
+        right_frame.grid_rowconfigure(1, weight=1)
+        right_frame.grid_rowconfigure(2, weight=1)
+        right_frame.grid_rowconfigure(3, weight=1)
+        right_frame.grid_columnconfigure(0, weight=1)  # Add this line
+
+        # Precipitation card
+        precip_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        precip_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 5))  # Changed to nsew and column=0
+        precip_frame.grid_columnconfigure(0, weight=1)
+        
+        tk.Label(precip_frame, text="💧 PRECIPITATION", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
+        self.precip_label = tk.Label(precip_frame, text='0"', font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
+        self.precip_label.grid(row=1, column=0, sticky="w", padx=10)
+        tk.Label(precip_frame, text="Today", font=("Helvetica", 12), bg="#2c2c2c", fg="white").grid(row=2, column=0, sticky="w", padx=10)
+        self.precip_next_label = tk.Label(precip_frame, text="Next expected is .6\" Sun.", font=("Helvetica", 11), bg="#2c2c2c", fg="white")
+        self.precip_next_label.grid(row=3, column=0, sticky="w", padx=10, pady=(0, 8))
+
+        # Feels like card
+        feels_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        feels_frame.grid(row=1, column=0, sticky="nsew", pady=5)  # Changed to nsew and column=0
+        feels_frame.grid_columnconfigure(0, weight=1)
+        
+        tk.Label(feels_frame, text="🌡️ FEELS LIKE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
+        self.feels_like_label = tk.Label(feels_frame, text="74°", font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
+        self.feels_like_label.grid(row=1, column=0, sticky="w", padx=10)
+        tk.Label(feels_frame, text="Wind is making it feel cooler.", font=("Helvetica", 11), bg="#2c2c2c", fg="white").grid(row=2, column=0, sticky="w", padx=10, pady=(0, 8))
+
+        # Pressure card
+        pressure_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        pressure_frame.grid(row=2, column=0, sticky="nsew", pady=5)  # Changed to nsew
+        pressure_frame.grid_columnconfigure(0, weight=1)
+        
+        tk.Label(pressure_frame, text="🔘 PRESSURE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
+        
+        self.pressure_label = tk.Label(pressure_frame, text="29.98\ninHg", font=("Helvetica", 18, "bold"), bg="#2c2c2c", fg="white", justify="center")
+        self.pressure_label.grid(row=1, column=0, padx=10, pady=5)
+        
+        tk.Label(pressure_frame, text="Low                    High", font=("Helvetica", 10), bg="#2c2c2c", fg="white").grid(row=2, column=0, padx=10, pady=(0, 8))
+
+        # Averages card
+        averages_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        averages_frame.grid(row=3, column=0, sticky="nsew", pady=(5, 0))  # Changed to nsew
+        averages_frame.grid_columnconfigure(0, weight=1)
+        
+        tk.Label(averages_frame, text="📊 AVERAGES", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
+        self.avg_temp_label = tk.Label(averages_frame, text="+14°", font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
+        self.avg_temp_label.grid(row=1, column=0, sticky="w", padx=10)
+        tk.Label(averages_frame, text="above average daily high", font=("Helvetica", 11), bg="#2c2c2c", fg="white").grid(row=2, column=0, sticky="w", padx=10)
+        
+        # Today/Average comparison
+        comparison_frame = tk.Frame(averages_frame, bg="#2c2c2c")
+        comparison_frame.grid(row=3, column=0, sticky="ew", padx=10, pady=(5, 0))
+        comparison_frame.grid_columnconfigure(0, weight=1)
+        comparison_frame.grid_columnconfigure(1, weight=1)
+        
+        tk.Label(comparison_frame, text="Today", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w")
+        self.today_high_label = tk.Label(comparison_frame, text="H:96°", font=("Helvetica", 10), bg="#2c2c2c", fg="white")
+        self.today_high_label.grid(row=0, column=1, sticky="e")
+        
+        tk.Label(comparison_frame, text="Average", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=1, column=0, sticky="w", pady=(0, 8))
+        self.avg_high_label = tk.Label(comparison_frame, text="H:82°", font=("Helvetica", 10), bg="#2c2c2c", fg="white")
+        self.avg_high_label.grid(row=1, column=1, sticky="e", pady=(0, 8))
 
 # Run the app if this file is executed directly
 if __name__ == "__main__":
