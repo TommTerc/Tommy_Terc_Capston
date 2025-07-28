@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from tkinter import messagebox
 import requests
 
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -15,11 +16,16 @@ if not API_KEY:
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+from features import weather_alert
 from src.weather_api import fetch_weather_data, fetch_5day_forecast
 from data.storage import load_weather_data, save_weather_data
 from src.utils import format_wind_info, format_humidity
 from features.favorite_cities import add_favorite_city, get_favorite_cities, is_favorite_city, remove_favorite_city
+from features.weather_alert import check_weather_alerts 
 
+
+# Mock data import for testing purposes
+# Set USE_MOCK to True to use mock data instead of real API calls
 USE_MOCK = False
 if USE_MOCK:
     from data.mock_weather import get_mock_weather_data
@@ -65,11 +71,11 @@ class WeatherApp:
         self.create_temperature_section()
         self.create_conditions_section()
         self.create_forecast_section()
-        self.right_frame_utilities()  # Add this line
+        self.right_frame_utilities()  
 
     def create_main_weather_display(self):
         main_frame = tk.Frame(self.root, bg="#6db3f2")
-        main_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)  # Changed from row=0 to row=1
+        main_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)  
         main_frame.grid_columnconfigure(1, weight=1)
         main_frame.grid_columnconfigure(1, weight=1)
         main_frame.grid_columnconfigure(2, weight=1)
