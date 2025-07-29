@@ -370,11 +370,29 @@ class WeatherApp:
         right_frame.grid_rowconfigure(1, weight=1)
         right_frame.grid_rowconfigure(2, weight=1)
         right_frame.grid_rowconfigure(3, weight=1)
-        right_frame.grid_columnconfigure(0, weight=1)  # Add this line
+        right_frame.grid_rowconfigure(4, weight=1)  # Add row for weather alerts
+        right_frame.grid_columnconfigure(0, weight=1)
+        right_frame.grid_columnconfigure(1, weight=1)
 
-        # Precipitation card
+
+        
+        # WEATHER ALERTS CARD (First - most important)
+        alerts_frame = tk.Frame(right_frame, height=10, bg="#2c2c2c", relief="solid", bd=1)
+        alerts_frame.grid(row=1, column=1, sticky="nswe", padx=30, pady=10)  # Changed: row=0, column=0, increased pady
+
+        tk.Label(alerts_frame, text="⚠️ WEATHER ALERTS", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
+        self.alert_title_label = tk.Label(alerts_frame, text="Heat Advisory & 1 More", font=("Helvetica", 16, "bold"), bg="#2c2c2c", fg="white")
+        self.alert_title_label.grid(row=1, column=0, sticky="w", padx=15, pady=(5, 0))
+        
+        self.alert_desc_label = tk.Label(alerts_frame, text="Heat Advisory. These conditions are expected by\n11:00 AM (EDT), Friday, July 25. Additional alert: Air\nQuality Alert.", 
+                                        font=("Helvetica", 9), bg="#2c2c2c", fg="white", justify="left", wraplength=250)
+        self.alert_desc_label.grid(row=2, column=0, sticky="w", padx=12, pady=(5, 0))
+        
+        tk.Label(alerts_frame, text="National Weather Service", font=("Helvetica", 8), bg="#2c2c2c", fg="gray").grid(row=3, column=0, sticky="w", padx=10, pady=(5, 8))
+
+        # Precipitation card (moved to second position)  
         precip_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        precip_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 5))  # Changed to nsew and column=0
+        precip_frame.grid(row=1, column=0, sticky="nsew", pady=5)  # Keep this the same
         precip_frame.grid_columnconfigure(0, weight=1)
         
         tk.Label(precip_frame, text="💧 PRECIPITATION", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
@@ -386,7 +404,7 @@ class WeatherApp:
 
         # Feels like card
         feels_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        feels_frame.grid(row=1, column=0, sticky="nsew", pady=5)  # Changed to nsew and column=0
+        feels_frame.grid(row=2, column=0, sticky="nsew", pady=5)
         feels_frame.grid_columnconfigure(0, weight=1)
         
         tk.Label(feels_frame, text="🌡️ FEELS LIKE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
@@ -396,7 +414,7 @@ class WeatherApp:
 
         # Pressure card
         pressure_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        pressure_frame.grid(row=2, column=0, sticky="nsew", pady=5)  # Changed to nsew
+        pressure_frame.grid(row=3, column=0, sticky="nsew", pady=5)
         pressure_frame.grid_columnconfigure(0, weight=1)
         
         tk.Label(pressure_frame, text="🔘 PRESSURE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
@@ -408,7 +426,7 @@ class WeatherApp:
 
         # Averages card
         averages_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        averages_frame.grid(row=3, column=0, sticky="nsew", pady=(5, 0))  # Changed to nsew
+        averages_frame.grid(row=4, column=0, sticky="nsew", pady=(5, 0))
         averages_frame.grid_columnconfigure(0, weight=1)
         
         tk.Label(averages_frame, text="📊 AVERAGES", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))

@@ -372,3 +372,28 @@ if __name__ == "__main__":
     print(f"\nAlert rules for New York: {len(rules)}")
     for rule in rules:
         print(f"- {rule['alert_type']}: {rule['condition']} {rule['threshold_value']}")
+        
+def update_weather_alerts(self, weather_data):
+    """Update the weather alerts card with current alerts"""
+    if not hasattr(self, 'alert_title_label'):
+        return
+    
+    # Check for weather alerts in the data
+    alerts = weather_data.get('alerts', [])
+    
+    if alerts:
+        # Display first alert
+        alert = alerts[0]
+        title = alert.get('event', 'Weather Alert')
+        description = alert.get('description', 'No details available')
+        
+        # Show count if multiple alerts
+        if len(alerts) > 1:
+            title += f" & {len(alerts) - 1} More"
+        
+        self.alert_title_label.config(text=title)
+        self.alert_desc_label.config(text=description[:150] + "..." if len(description) > 150 else description)
+    else:
+        # No alerts
+        self.alert_title_label.config(text="No Active Alerts")
+        self.alert_desc_label.config(text="No weather alerts in effect for this area.")
