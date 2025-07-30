@@ -15,6 +15,15 @@ class AlertType(Enum):
     STORM = "storm"
     WIND_SPEED = "wind_speed"
     HUMIDITY = "humidity"
+    TORNADO = "tornado"
+    HURRICANE = "hurricane"
+    TROPICAL_STORM = "tropical_storm"
+    BLIZZARD = "blizzard"
+    WINTER_STORM = "winter_storm"
+    HEAT = "heat"
+    FLOOD = "flood"
+    FIRE_WEATHER = "fire_weather"
+    AIR_QUALITY = "air_quality"
 
 class AlertSeverity(Enum):
     """Severity levels for alerts."""
@@ -148,12 +157,12 @@ def check_weather_alerts(weather_data):
     # Get all active rules for this city
     rules = get_alert_rules(city)
     triggered_alerts = []
-    
+
     for rule in rules:
         alert_triggered = False
         alert_message = ""
         severity = AlertSeverity.LOW
-        
+
         # Check temperature alerts
         if rule['alert_type'] == AlertType.TEMPERATURE_HIGH.value:
             temp = weather_data.get('temperature', 0)
@@ -169,28 +178,88 @@ def check_weather_alerts(weather_data):
                 severity = _get_temperature_severity(temp, rule['threshold_value'], False)
                 alert_message = f"Low temperature alert: {temp}°F (threshold: {rule['threshold_value']}°F)"
         
-        # Check weather condition alerts
-        elif rule['alert_type'] == AlertType.RAIN.value:
-            description = weather_data.get('description', '').lower()
-            if 'rain' in description:
-                alert_triggered = True
-                severity = AlertSeverity.MEDIUM
-                alert_message = f"Rain alert: {description.title()}"
-        
-        elif rule['alert_type'] == AlertType.SNOW.value:
-            description = weather_data.get('description', '').lower()
-            if 'snow' in description:
-                alert_triggered = True
-                severity = AlertSeverity.HIGH
-                alert_message = f"Snow alert: {description.title()}"
-        
+        # Check severe thunderstorm alerts
         elif rule['alert_type'] == AlertType.STORM.value:
-            description = weather_data.get('description', '').lower()
-            if 'storm' in description or 'thunder' in description:
+            wind_speed = weather_data.get('wind_speed', 0)
+            hail_size = weather_data.get('hail_size', 0)
+            if _check_condition(wind_speed, 58, ">=") or _check_condition(hail_size, 1, ">="):
                 alert_triggered = True
                 severity = AlertSeverity.CRITICAL
-                alert_message = f"Storm alert: {description.title()}"
-        
+                alert_message = f"Severe thunderstorm alert: Wind speed {wind_speed} mph, hail size {hail_size} inch"
+
+        # Check tornado alerts
+        elif rule['alert_type'] == AlertType.TORNADO.value:
+            tornado_detected = weather_data.get('tornado_detected', False)
+            if tornado_detected:
+                alert_triggered = True
+                severity = AlertSeverity.CRITICAL
+                alert_message = "Tornado warning: Tornado detected or imminent"
+
+        # Check hurricane and tropical storm alerts
+        elif rule['alert_type'] == AlertType.HURRICANE.value:
+            wind_speed = weather_data.get('wind_speed', 0)
+            if _check_condition(wind_speed, 74, ">="):
+                alert_triggered = True
+                severity = AlertSeverity.CRITICAL
+                alert_message = f"Hurricane warning: Sustained winds {wind_speed} mph"
+
+        elif rule['alert_type'] == AlertType.TROPICAL_STORM.value:
+            wind_speed = weather_data.get('wind_speed', 0)
+            if _check_condition(wind_speed, 39, ">=") and _check_condition(wind_speed, 73, "<="):
+                alert_triggered = True
+                severity = AlertSeverity.HIGH
+                alert_message = f"Tropical storm warning: Sustained winds {wind_speed} mph"
+
+        # Check winter weather alerts
+        elif rule['alert_type'] == AlertType.BLIZZARD.value:
+            visibility = weather_data.get('visibility', 1)
+            wind_speed = weather_data.get('wind_speed', 0)
+            if _check_condition(visibility, 0.25, "<=") and _check_condition(wind_speed, 35, ">="):
+                alert_triggered = True
+                severity = AlertSeverity.CRITICAL
+                alert_message = "Blizzard warning: Reduced visibility and high winds"
+
+        elif rule['alert_type'] == AlertType.WINTER_STORM.value:
+            snow_accumulation = weather_data.get('snow_accumulation', 0)
+            ice_accumulation = weather_data.get('ice_accumulation', 0)
+            if _check_condition(snow_accumulation, 5, ">=") or _check_condition(ice_accumulation, 0.25, ">="):
+                alert_triggered = True
+                severity = AlertSeverity.HIGH
+                alert_message = f"Winter storm warning: Snow {snow_accumulation} inches, ice {ice_accumulation} inches"
+
+        # Check heat alerts
+        elif rule['alert_type'] == AlertType.HEAT.value:
+            heat_index = weather_data.get('heat_index', 0)
+            if _check_condition(heat_index, 105, ">="):
+                alert_triggered = True
+                severity = AlertSeverity.CRITICAL
+                alert_message = f"Excessive heat warning: Heat index {heat_index}°F"
+
+        # Check flood alerts
+        elif rule['alert_type'] == AlertType.FLOOD.value:
+            flood_detected = weather_data.get('flood_detected', False)
+            if flood_detected:
+                alert_triggered = True
+                severity = AlertSeverity.CRITICAL
+                alert_message = "Flood warning: Flooding detected or imminent"
+
+        # Check fire weather alerts
+        elif rule['alert_type'] == AlertType.FIRE_WEATHER.value:
+            humidity = weather_data.get('humidity', 100)
+            wind_speed = weather_data.get('wind_speed', 0)
+            if _check_condition(humidity, 30, "<=") and _check_condition(wind_speed, 20, ">="):
+                alert_triggered = True
+                severity = AlertSeverity.HIGH
+                alert_message = "Fire weather warning: Low humidity and high winds"
+
+        # Check air quality alerts
+        elif rule['alert_type'] == AlertType.AIR_QUALITY.value:
+            aqi = weather_data.get('aqi', 0)
+            if _check_condition(aqi, 100, ">="):
+                alert_triggered = True
+                severity = AlertSeverity.MEDIUM
+                alert_message = f"Air quality alert: AQI {aqi}"
+
         # If alert was triggered, record it
         if alert_triggered:
             alert_data = {

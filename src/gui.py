@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from tkinter import messagebox
 import requests
+from datetime import datetime
 
 
 # Load environment variables from .env file
@@ -16,12 +17,12 @@ if not API_KEY:
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from features import weather_alert
+
 from src.weather_api import fetch_weather_data, fetch_5day_forecast
 from data.storage import load_weather_data, save_weather_data
 from src.utils import format_wind_info, format_humidity
 from features.favorite_cities import add_favorite_city, get_favorite_cities, is_favorite_city, remove_favorite_city
-from features.weather_alert import check_weather_alerts 
+from features.weather_alert import check_weather_alerts, add_alert_rule, init_alerts_db
 
 
 # Mock data import for testing purposes
@@ -34,9 +35,14 @@ class WeatherApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Tommy's Weather App")
-        self.root.geometry("980x600")
+        self.root.geometry("1080x700")
         self.root.resizable(True, True)
         self.root.configure(bg="#6db3f2")
+
+         # Initialize the alerts database
+        init_alerts_db()
+        # Check for weather alerts  
+        
 
 
         #
@@ -64,6 +70,9 @@ class WeatherApp:
 
         self.favorite_btn = tk.Button(search_frame, text="🤍", font=self.small_font, command=self.toggle_favorite)
         self.favorite_btn.grid(row=0, column=2, padx=5, pady=10)
+
+        self.favorites_menu_btn = tk.Button(search_frame, text="⭐ Favorites", font=self.small_font, command=self.show_favorites_menu)
+        self.favorites_menu_btn.grid(row=0, column=3, padx=5, pady=10)
 
         self.city_entry.bind('<Return>', lambda event: self.get_weather())
 
@@ -127,7 +136,7 @@ class WeatherApp:
 
     def create_forecast_section(self):
         self.forecast_frame = tk.Frame(self.root, bg="#6db3f2")
-        self.forecast_frame.grid(row=4, column=0, columnspan=2, sticky="nsew", padx=30, pady=10)  # Changed from row=3 to row=4
+        self.forecast_frame.grid(row=4, rowspan=7, column=0, columnspan=2, sticky="nsew", padx=30, pady=10)  # Changed from row=3 to row=4
         for i in range(5):
             self.forecast_frame.grid_columnconfigure(i, weight=1)
 
@@ -262,6 +271,11 @@ class WeatherApp:
         # Update favorite button at the end
         self.update_favorite_button()
 
+        # Check for weather alerts
+        alerts = check_weather_alerts(data)
+        if alerts:
+            self.update_weather_alerts(alerts)
+
     def show_last_weather(self):
         # Load and display the most recently saved weather data
         try:
@@ -390,7 +404,26 @@ class WeatherApp:
         
         tk.Label(alerts_frame, text="National Weather Service", font=("Helvetica", 8), bg="#2c2c2c", fg="gray").grid(row=3, column=0, sticky="w", padx=10, pady=(5, 8))
 
-        # Precipitation card (moved to second position)  
+        # SUNRISE/SUNSET CARD (Second position - under weather alerts)
+        sunrise_sunset_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        sunrise_sunset_frame.grid(row=2, column=1, sticky="nsew", padx=30, pady=10)  # row=2, column=1 (under alerts)
+        sunrise_sunset_frame.grid_columnconfigure(0, weight=1)
+
+        tk.Label(sunrise_sunset_frame, text="🌅 SUNRISE & SUNSET", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
+
+        # Sunrise label
+        self.sunrise_label = tk.Label(sunrise_sunset_frame, text="Sunrise: 6:45 AM", font=("Helvetica", 14, "bold"), bg="#2c2c2c", fg="white")
+        self.sunrise_label.grid(row=1, column=0, sticky="w", padx=10, pady=(5, 2))
+
+        # Sunset label  
+        self.sunset_label = tk.Label(sunrise_sunset_frame, text="Sunset: 7:32 PM", font=("Helvetica", 14, "bold"), bg="#2c2c2c", fg="white")
+        self.sunset_label.grid(row=2, column=0, sticky="w", padx=10, pady=(2, 5))
+
+        # Day length info
+        self.day_length_label = tk.Label(sunrise_sunset_frame, text="Day length: 12h 47m", font=("Helvetica", 10), bg="#2c2c2c", fg="gray")
+        self.day_length_label.grid(row=3, column=0, sticky="w", padx=10, pady=(0, 8))
+
+        # Precipitation card (moved to third position)  
         precip_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
         precip_frame.grid(row=1, column=0, sticky="nsew", pady=5)  # Keep this the same
         precip_frame.grid_columnconfigure(0, weight=1)
@@ -448,6 +481,78 @@ class WeatherApp:
         self.avg_high_label = tk.Label(comparison_frame, text="H:82°", font=("Helvetica", 10), bg="#2c2c2c", fg="white")
         self.avg_high_label.grid(row=1, column=1, sticky="e", pady=(0, 8))
 
+        # Moon phase card (newly added)
+        moon_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        moon_frame.grid(row=3, column=1, sticky="nsew", padx=30, pady=10)  # row=3, column=1 (under sunrise/sunset)
+        moon_frame.grid_columnconfigure(0, weight=1)
+
+        tk.Label(moon_frame, text="🌙 MOON PHASE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
+
+        # Large moon emoji
+        self.moon_phase_label = tk.Label(moon_frame, text="🌕", font=("Helvetica", 32), bg="#2c2c2c", fg="white")
+        self.moon_phase_label.grid(row=1, column=0, padx=10, pady=(5, 0))
+
+        # Moon phase name
+        self.moon_name_label = tk.Label(moon_frame, text="Full Moon", font=("Helvetica", 14, "bold"), bg="#2c2c2c", fg="white")
+        self.moon_name_label.grid(row=2, column=0, padx=10, pady=(0, 2))
+
+        # Illumination percentage
+        self.moon_illumination_label = tk.Label(moon_frame, text="100% illuminated", font=("Helvetica", 10), bg="#2c2c2c", fg="white")
+        self.moon_illumination_label.grid(row=3, column=0, padx=10, pady=(0, 2))
+
+        # Next full moon
+        self.moon_next_label = tk.Label(moon_frame, text="Next full moon: In 29 days", font=("Helvetica", 9), bg="#2c2c2c", fg="gray")
+        self.moon_next_label.grid(row=4, column=0, padx=10, pady=(0, 8))
+
+        # Bind moon phase update to the weather data fetch
+        self.original_display_weather = self.display_weather
+        def display_weather_with_moon(data):
+            self.original_display_weather(data)
+            self.update_moon_phase()  # Update moon phase after weather data is displayed
+        self.display_weather = display_weather_with_moon
+
+    def update_moon_phase(self):
+        """Update the moon phase card with current moon data."""
+        try:
+            from features.moon_phase import get_moon_data, get_next_full_moon
+            
+            moon_data = get_moon_data()
+            next_full = get_next_full_moon()
+            
+            # Update moon phase labels
+            if hasattr(self, 'moon_phase_label'):
+                self.moon_phase_label.config(text=moon_data['emoji'])
+                self.moon_name_label.config(text=moon_data['phase_name'])
+                self.moon_illumination_label.config(text=f"{moon_data['illumination']}% illuminated")
+                
+                # Format next full moon date
+                days_until_full = (next_full - datetime.now()).days
+                if days_until_full == 0:
+                    next_full_text = "Today"
+                elif days_until_full == 1:
+                    next_full_text = "Tomorrow"
+                else:
+                    next_full_text = f"In {days_until_full} days"
+                
+                self.moon_next_label.config(text=f"Next full moon: {next_full_text}")
+            
+        except ImportError:
+            # Fallback if moon_phase module has issues
+            if hasattr(self, 'moon_phase_label'):
+                self.moon_phase_label.config(text="🌙")
+                self.moon_name_label.config(text="Moon Phase")
+                self.moon_illumination_label.config(text="-- % illuminated")
+                self.moon_next_label.config(text="Next full moon: --")
+
+    def add_custom_alert(self, city, country, alert_type, threshold_value, condition=">="):
+        """Add a custom weather alert rule."""
+        success = add_alert_rule(city, country, alert_type, threshold_value, condition)
+        if success:
+            messagebox.showinfo("Alert Added", f"Alert rule added for {city}: {alert_type} {condition} {threshold_value}")
+        else:
+            messagebox.showerror("Error", "Failed to add alert rule.")
+
+    #
 # Run the app if this file is executed directly
 if __name__ == "__main__":
     root = tk.Tk()
