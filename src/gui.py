@@ -489,9 +489,9 @@ class WeatherApp:
         self.avg_high_label = tk.Label(comparison_frame, text="H:82°", font=("Helvetica", 10), bg="#2c2c2c", fg="white")
         self.avg_high_label.grid(row=1, column=1, sticky="e", pady=(0, 8))
 
-        # Moon phase card (newly added)
+        # Moon phase card (move to row 4, column 1)
         moon_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        moon_frame.grid(row=3, column=1, sticky="nsew", padx=30, pady=10)  # row=3, column=1 (under sunrise/sunset)
+        moon_frame.grid(row=4, column=1, sticky="nsew", padx=30, pady=10)  # Changed from row=3 to row=4
         moon_frame.grid_columnconfigure(0, weight=1)
 
         tk.Label(moon_frame, text="🌙 MOON PHASE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
@@ -511,6 +511,26 @@ class WeatherApp:
         # Next full moon
         self.moon_next_label = tk.Label(moon_frame, text="Next full moon: In 29 days", font=("Helvetica", 9), bg="#2c2c2c", fg="gray")
         self.moon_next_label.grid(row=4, column=0, padx=10, pady=(0, 8))
+
+        # UV INDEX CARD (NEW - Add in row 3, column 1)
+        uv_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        uv_frame.grid(row=3, column=1, sticky="nsew", padx=30, pady=10)
+        uv_frame.grid_columnconfigure(0, weight=1)
+
+        tk.Label(uv_frame, text="☀️ UV INDEX", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
+        
+        # UV Index value (large display)
+        self.uv_index_label = tk.Label(uv_frame, text="8", font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
+        self.uv_index_label.grid(row=1, column=0, padx=10, pady=(5, 0))
+        
+        # UV level description
+        self.uv_level_label = tk.Label(uv_frame, text="Very High", font=("Helvetica", 14, "bold"), bg="#2c2c2c", fg="white")
+        self.uv_level_label.grid(row=2, column=0, padx=10, pady=(0, 2))
+        
+        # UV advice
+        self.uv_advice_label = tk.Label(uv_frame, text="Use sunscreen, wear protective\nclothing and sunglasses.", 
+                                       font=("Helvetica", 9), bg="#2c2c2c", fg="white", justify="left")
+        self.uv_advice_label.grid(row=3, column=0, padx=10, pady=(0, 8))
 
         # Bind moon phase update to the weather data fetch
         self.original_display_weather = self.display_weather
