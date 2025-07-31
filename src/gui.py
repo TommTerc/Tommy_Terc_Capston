@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from tkinter import messagebox
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 # Load environment variables from .env file
@@ -45,7 +45,7 @@ class WeatherApp:
         
 
 
-        #
+        
         # Initialize variables
         self.city_var = tk.StringVar()
         self.current_city_data = None
@@ -84,7 +84,7 @@ class WeatherApp:
 
     def create_main_weather_display(self):
         main_frame = tk.Frame(self.root, bg="#6db3f2")
-        main_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)  
+        main_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=10, )  
         main_frame.grid_columnconfigure(1, weight=1)
         main_frame.grid_columnconfigure(1, weight=1)
         main_frame.grid_columnconfigure(2, weight=1)
@@ -129,14 +129,14 @@ class WeatherApp:
         conditions_frame.grid_columnconfigure(1, weight=1)
 
         # Humidity and wind labels
-        self.humidity_label = tk.Label(conditions_frame, text="Humidity: 55%", font=self.small_font, bg="#6db3f2", fg="white")  # Changed bg
+        self.humidity_label = tk.Label(conditions_frame, text="Humidity: 55%", font=self.small_font, bg="#6db3f2", fg="white", )  # Changed bg
         self.humidity_label.grid(row=0, column=0, padx=10, pady=5, sticky="ew")
         self.wind_label = tk.Label(conditions_frame, text="Wind: 7 mph", font=self.small_font, bg="#6db3f2", fg="white")  # Changed bg
         self.wind_label.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
 
     def create_forecast_section(self):
         self.forecast_frame = tk.Frame(self.root, bg="#6db3f2")
-        self.forecast_frame.grid(row=4, rowspan=7, column=0, columnspan=2, sticky="nsew", padx=30, pady=10)  # Changed from row=3 to row=4
+        self.forecast_frame.grid(row=4, column=0, columnspan=2, sticky="nsew", padx=30, pady=10)  # Changed from row=3 to row=4
         for i in range(5):
             self.forecast_frame.grid_columnconfigure(i, weight=1)
 
@@ -151,21 +151,25 @@ class WeatherApp:
 
     def create_forecast_card(self, parent, day_offset):
         # Create a single forecast card (day, icon, temp) for the forecast row
-        card_font = font.Font(family="Helvetica", size=16, weight="bold")
-        temp_font = font.Font(family="Helvetica", size=14)
+        card_font = font.Font(family="Helvetica", size=18, weight="bold")  # Increased from 16
+        temp_font = font.Font(family="Helvetica", size=16)  # Increased from 14
         
-        # Add black border to the frame
+        # Add black border to the frame - make it larger
         frame = tk.Frame(parent, bg="#4a90e2", bd=2, relief="solid", highlightbackground="black", highlightthickness=2)
-        frame.grid(row=0, column=day_offset, padx=4, pady=2, sticky="nsew")
+        frame.grid(row=0, column=day_offset, padx=6, pady=4, sticky="nsew")  # Increased padx and pady
+        
+        # Make the frame have a minimum size
+        frame.config(width=150, height=120)  # Set minimum dimensions
+        frame.grid_propagate(False)  # Prevent frame from shrinking
         
         day_label = tk.Label(frame, text="", font=card_font, bg="#4a90e2", fg="white")
-        day_label.pack(pady=(2,0), fill="x")
+        day_label.pack(pady=(8,2), fill="x")  # Increased padding
         
-        icon_label = tk.Label(frame, text="", font=("Helvetica", 28), bg="#4a90e2")
-        icon_label.pack(fill="x")
+        icon_label = tk.Label(frame, text="", font=("Helvetica", 36), bg="#4a90e2")  # Increased from 28
+        icon_label.pack(fill="x", pady=4)  # Added padding
         
         temp_label = tk.Label(frame, text="", font=temp_font, bg="#4a90e2", fg="white")
-        temp_label.pack(pady=(0,2), fill="x")
+        temp_label.pack(pady=(2,8), fill="x")  # Increased padding
         
         return day_label, icon_label, temp_label
     
@@ -271,10 +275,14 @@ class WeatherApp:
         # Update favorite button at the end
         self.update_favorite_button()
 
-        # Check for weather alerts
-        alerts = check_weather_alerts(data)
-        if alerts:
-            self.update_weather_alerts(alerts)
+        # UPDATE RIGHT FRAME CARDS WITH API DATA
+        self.update_right_frame_cards(data)
+
+        # Check for weather alerts and update the card
+        self.update_weather_alerts(data)
+
+        # Update moon phase
+        self.update_moon_phase()
 
     def show_last_weather(self):
         # Load and display the most recently saved weather data
@@ -552,7 +560,106 @@ class WeatherApp:
         else:
             messagebox.showerror("Error", "Failed to add alert rule.")
 
-    #
+    def update_weather_alerts(self, data):
+        """Update the weather alerts card with actual alert data from One Call API."""
+        if not hasattr(self, 'alert_title_label'):
+            return
+        
+        # Get alerts from the API data
+        api_alerts = data.get('alerts', [])
+        
+        # Also check your custom alert rules
+        custom_alerts = check_weather_alerts(data)
+        
+        # Combine both types of alerts
+        all_alerts = api_alerts + custom_alerts
+        
+        if all_alerts and len(all_alerts) > 0:
+            # Display the first (most important) alert
+            first_alert = all_alerts[0]
+            
+            # Handle API alerts vs custom alerts differently
+            if 'event' in first_alert:  # API alert
+                title = first_alert.get('event', 'Weather Alert')
+                description = first_alert.get('description', 'No details available')
+            else:  # Custom alert
+                title = first_alert.get('alert_type', 'Weather Alert').replace('_', ' ').title()
+                description = first_alert.get('message', 'No details available')
+            
+            # Update alert title - show count if multiple alerts
+            if len(all_alerts) > 1:
+                title = f"{title} & {len(all_alerts) - 1} More"
+            
+            self.alert_title_label.config(text=title, fg="#ff8800")  # Orange for alerts
+            
+            # Truncate description if too long for display
+            if len(description) > 150:
+                display_message = description[:150] + "..."
+            else:
+                display_message = description
+            
+            self.alert_desc_label.config(text=display_message)
+                
+        else:
+            # No alerts - show default message
+            self.alert_title_label.config(text="No Active Alerts", fg="white")
+            self.alert_desc_label.config(text="No weather alerts in effect for this area.")
+
+    def update_right_frame_cards(self, data):
+        """Update all right frame cards with One Call API data."""
+        try:
+            print(f"Updating right frame cards with data keys: {list(data.keys())}")  # Debug
+            
+            # Update Feels Like temperature
+            feels_like = data.get('feels_like', data.get('temperature', 0))
+            if hasattr(self, 'feels_like_label'):
+                self.feels_like_label.config(text=f"{int(feels_like)}°")
+                print(f"Updated feels like: {feels_like}")  # Debug
+            
+            # Update Pressure
+            pressure = data.get('pressure', 0)
+            if hasattr(self, 'pressure_label') and pressure:
+                # Convert hPa to inHg (1 hPa = 0.02953 inHg)
+                pressure_inhg = pressure * 0.02953
+                self.pressure_label.config(text=f"{pressure_inhg:.2f}\ninHg")
+                print(f"Updated pressure: {pressure} hPa -> {pressure_inhg:.2f} inHg")  # Debug
+            
+            # Update Precipitation
+            precipitation = data.get('precipitation', 0)
+            if hasattr(self, 'precip_label'):
+                self.precip_label.config(text=f'{precipitation:.1f}"')
+                print(f"Updated precipitation: {precipitation}")  # Debug
+            
+            # Update Sunrise/Sunset if available
+            if hasattr(self, 'sunrise_label') and data.get('sunrise'):
+                sunrise_time = datetime.fromtimestamp(data['sunrise']).strftime('%I:%M %p')
+                sunset_time = datetime.fromtimestamp(data['sunset']).strftime('%I:%M %p')
+                
+                self.sunrise_label.config(text=f"Sunrise: {sunrise_time}")
+                self.sunset_label.config(text=f"Sunset: {sunset_time}")
+                
+                # Calculate day length
+                sunrise_dt = datetime.fromtimestamp(data['sunrise'])
+                sunset_dt = datetime.fromtimestamp(data['sunset'])
+                day_length = sunset_dt - sunrise_dt
+                hours = day_length.seconds // 3600
+                minutes = (day_length.seconds % 3600) // 60
+                self.day_length_label.config(text=f"Day length: {hours}h {minutes}m")
+                
+                print(f"Updated sunrise/sunset: {sunrise_time} / {sunset_time}")  # Debug
+            
+            # Update averages (using current temp for now)
+            current_temp = data.get('temperature', 0)
+            temp_max = data.get('temp_max', current_temp)
+            if hasattr(self, 'today_high_label'):
+                self.today_high_label.config(text=f"H:{int(temp_max)}°")
+                print(f"Updated today high: {temp_max}")  # Debug
+    
+        except Exception as e:
+            print(f"Error updating right frame cards: {e}")
+            import traceback
+            traceback.print_exc()
+#
 # Run the app if this file is executed directly
 if __name__ == "__main__":
     root = tk.Tk()

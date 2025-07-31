@@ -37,26 +37,31 @@ def format_sun_times(sun_data):
     
     return f"Sunrise: {sunrise}", f"Sunset: {sunset}"
 
-def update_sunrise_sunset(self, lat, lon):
-    """Update sunrise/sunset times based on coordinates."""
-    try:
-        from features.sunrise_sunset import get_sunrise_sunset, format_sun_times
+def update_sunrise_sunset(self, data):
+    """Update sunrise/sunset times from API data."""
+    if not hasattr(self, 'sunrise_label'):
+        return
+    
+    # Check if API provides sunrise/sunset data
+    sunrise_timestamp = data.get('sunrise')
+    sunset_timestamp = data.get('sunset')
+    
+    if sunrise_timestamp and sunset_timestamp:
+        from datetime import datetime
         
-        sun_data = get_sunrise_sunset(lat, lon)
-        if sun_data:
-            sunrise, sunset = format_sun_times(sun_data)
-            self.sunrise_label.config(text=sunrise)
-            self.sunset_label.config(text=sunset)
-            
-            # Calculate day length
-            day_length = sun_data.get('day_length', 'Unknown')
-            self.day_length_label.config(text=f"Day length: {day_length}")
-        else:
-            self.sunrise_label.config(text="Sunrise: --:--")
-            self.sunset_label.config(text="Sunset: --:--")
-            self.day_length_label.config(text="Day length: --")
-    except ImportError:
-        # Fallback if sunrise_sunset module doesn't exist
+        sunrise = datetime.fromtimestamp(sunrise_timestamp)
+        sunset = datetime.fromtimestamp(sunset_timestamp)
+        
+        self.sunrise_label.config(text=f"Sunrise: {sunrise.strftime('%I:%M %p')}")
+        self.sunset_label.config(text=f"Sunset: {sunset.strftime('%I:%M %p')}")
+        
+        # Calculate day length
+        day_length = sunset - sunrise
+        hours = day_length.seconds // 3600
+        minutes = (day_length.seconds % 3600) // 60
+        self.day_length_label.config(text=f"Day length: {hours}h {minutes}m")
+    else:
+        # Fallback to default values
         self.sunrise_label.config(text="Sunrise: 6:45 AM")
         self.sunset_label.config(text="Sunset: 7:32 PM")
         self.day_length_label.config(text="Day length: 12h 47m")

@@ -4,6 +4,16 @@ requests>=2.28.0
 # Environment variables management
 python-dotenv>=0.19.0
 
+# Time zone handling for accurate sunrise/sunset times
+pytz>=2022.1
+
+# Optional: Data validation for API responses
+# jsonschema>=4.0.0
+
+# Optional: Testing framework (development)
+# pytest>=7.0.0
+# pytest-mock>=3.7.0
+
 # Date and time utilities (built-in, but specifying for clarity)
 # datetime - built-in module
 

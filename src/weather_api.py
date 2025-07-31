@@ -1,124 +1,177 @@
-import os
 import requests
+import os
 from dotenv import load_dotenv
-from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# Load environment variables from the .env file (for API key)
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
-
-# Retrieve the OpenWeatherMap API key from environment variables
+load_dotenv()
 API_KEY = os.getenv('OPENWEATHER_API_KEY')
 
-# Define the base URLs for current weather and forecast endpoints
-BASE_URL = 'http://api.openweathermap.org/data/2.5/weather'
-FORECAST_URL = 'https://api.openweathermap.org/data/2.5/forecast'
-
-def fetch_weather_data(city):
-    """
-    Fetch current weather data for a given city from OpenWeatherMap API.
-    Returns a dictionary with temperature, description, city, and country.
-    """
+def get_coordinates(city):
+    """Get latitude and longitude for a city using Geocoding API"""
+    geocoding_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city}&limit=1&appid={API_KEY}"
+    
     try:
-        # Make a GET request to the current weather endpoint with city and API key
-        response = requests.get(BASE_URL, params={'q': city, 'appid': API_KEY, 'units': 'imperial'})
-        response.raise_for_status()  # Raise an error for bad responses
+        response = requests.get(geocoding_url)
+        response.raise_for_status()
         data = response.json()
         
-        # Extract weather information including actual min/max temps
-        weather_info = {
-            'temperature': round(data['main']['temp']),
-            'description': data['weather'][0]['description'],
-            'city': data['name'],
-            'country': data['sys']['country'],
-            'humidity': data['main'].get('humidity'),
-            'wind': data.get('wind', {}),
-            # Get actual min/max from API response
-            'temp_max': round(data['main'].get('temp_max', data['main']['temp'])),
-            'temp_min': round(data['main'].get('temp_min', data['main']['temp'])),
-            'feels_like': round(data['main'].get('feels_like', data['main']['temp']))
+        if data:
+            return data[0]['lat'], data[0]['lon'], data[0]['name'], data[0]['country']
+        return None, None, None, None
+        
+    except Exception as e:
+        print(f"Error getting coordinates: {e}")
+        return None, None, None, None
+
+def fetch_weather_data(city):
+    """Fetch comprehensive weather data using One Call API 3.0"""
+    # First get coordinates
+    lat, lon, city_name, country = get_coordinates(city)
+    
+    if not lat or not lon:
+        print(f"Could not find coordinates for {city}")
+        return None
+    
+    # Use One Call API 3.0
+    url = f"https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&appid={API_KEY}&units=imperial"
+    
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        
+        raw_data = response.json()
+        current = raw_data['current']
+        daily = raw_data['daily'][0]  # Today's daily data
+        
+        # Extract comprehensive weather data
+        data = {
+            'city': city_name,
+            'country': country,
+            'lat': lat,
+            'lon': lon,
+            'temperature': round(current['temp']),
+            'temp_max': round(daily['temp']['max']),
+            'temp_min': round(daily['temp']['min']),
+            'feels_like': round(current['feels_like']),
+            'description': current['weather'][0]['description'],
+            'humidity': current['humidity'],
+            'pressure': current['pressure'],
+            'wind_speed': current.get('wind_speed', 0),
+            'wind_deg': current.get('wind_deg', 0),
+            'visibility': current.get('visibility', 0) / 1000,  # Convert to km
+            'uvi': current.get('uvi', 0),
+            'clouds': current.get('clouds', 0),
+            'dew_point': round(current.get('dew_point', 0)),
+            'sunrise': current.get('sunrise'),
+            'sunset': current.get('sunset'),
+            
+            # Weather alerts (if any)
+            'alerts': raw_data.get('alerts', []),
+            
+            # Wind data formatted
+            'wind': {
+                'speed': current.get('wind_speed', 0),
+                'deg': current.get('wind_deg', 0),
+                'gust': current.get('wind_gust', 0)
+            }
         }
         
-        print(f"API Response - temp_max: {data['main'].get('temp_max')}, temp_min: {data['main'].get('temp_min')}")  # Debug
+        # Add precipitation data if available
+        if 'rain' in current:
+            data['precipitation'] = current['rain'].get('1h', 0)
+        elif 'snow' in current:
+            data['precipitation'] = current['snow'].get('1h', 0)
+        else:
+            data['precipitation'] = 0
+            
+        return data
         
-        return weather_info
-        
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP Error: {e}")
+        print(f"Response: {response.text}")
+        return None
     except Exception as e:
         print(f"Error fetching weather data: {e}")
         return None
 
-def fetch_forecast(lat, lon):
-    """
-    Fetch the 5-day/3-hour forecast data for given latitude and longitude.
-    Returns the full JSON response from the API.
-    """
-    try:
-        params = {
-            'lat': lat,
-            'lon': lon,
-            'appid': API_KEY,
-            'units': 'imperial'
-        }
-        # Make a GET request to the forecast endpoint with coordinates and API key
-        response = requests.get(FORECAST_URL, params=params)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        # Handle errors during the API call
-        print(f"Error fetching forecast: {e}")
-        return None
-
 def fetch_5day_forecast(city):
-    """
-    Fetch and process the 5-day forecast for a city.
-    Returns a list of dictionaries, each representing a day's forecast.
-    """
+    """Fetch 5-day forecast using One Call API 3.0 daily data"""
+    # First get coordinates
+    lat, lon, city_name, country = get_coordinates(city)
+    
+    if not lat or not lon:
+        return []
+    
+    # Use One Call API 3.0
+    url = f"https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&appid={API_KEY}&units=imperial"
+    
     try:
-        # Make a GET request to the forecast endpoint with city and API key
-        response = requests.get(FORECAST_URL, params={'q': city, 'appid': API_KEY, 'units': 'imperial'})
+        response = requests.get(url)
         response.raise_for_status()
-        data = response.json()
-        # Group forecast entries by day
-        days = defaultdict(list)
-        for entry in data['list']:
-            dt = datetime.fromtimestamp(entry['dt'])
-            days[dt.date()].append(entry)
+        
+        raw_data = response.json()
+        daily_data = raw_data['daily'][1:6]  # Skip today, get next 5 days
+        
         forecast = []
-        for i, (day, entries) in enumerate(days.items()):
-            # Pick the entry closest to 12:00 for each day
-            target = min(entries, key=lambda e: abs(datetime.fromtimestamp(e['dt']).hour - 12))
-            weather = target['weather'][0]
+        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        
+        for i, day_data in enumerate(daily_data):
+            # Calculate day name
+            future_date = datetime.now() + timedelta(days=i+1)
+            day_name = days[future_date.weekday()]
+            
+            # Weather icon mapping
+            weather_main = day_data['weather'][0]['main'].lower()
+            if 'cloud' in weather_main:
+                icon = "☁️"
+            elif 'rain' in weather_main:
+                icon = "🌧️"
+            elif 'clear' in weather_main:
+                icon = "☀️"
+            elif 'snow' in weather_main:
+                icon = "❄️"
+            elif 'thunder' in weather_main:
+                icon = "⛈️"
+            else:
+                icon = "🌤️"
+            
             forecast.append({
-                'day': day.strftime('%a'),
-                'icon': get_icon_from_description(weather['description']),
-                'high': int(target['main']['temp_max']),
-                'low': int(target['main']['temp_min'])
+                'day': day_name,
+                'high': round(day_data['temp']['max']),
+                'low': round(day_data['temp']['min']),
+                'icon': icon,
+                'description': day_data['weather'][0]['description']
             })
-            # Only keep 5 days
-            if len(forecast) == 5:
-                break
+        
         return forecast
+        
     except Exception as e:
-        # Handle errors during the API call or processing
-        print(f"Error fetching 5-day forecast: {e}")
+        print(f"Error fetching forecast: {e}")
         return []
 
-def get_icon_from_description(desc):
-    """
-    Map a weather description string to a weather emoji/icon.
-    """
-    desc = desc.lower()
-    if "cloud" in desc:
-        return "☁️"
-    elif "rain" in desc:
-        return "🌧️"
-    elif "clear" in desc:
-        return "☀️"
-    elif "snow" in desc:
-        return "❄️"
-    elif "storm" in desc:
-        return "⛈️"
-    elif "fog" in desc or "mist" in desc:
-        return "🌫️"
-    else:
-        return "🌡️"
+def get_weather_alerts(lat, lon):
+    """Get weather alerts for specific coordinates"""
+    url = f"https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&appid={API_KEY}&units=imperial"
+    
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        
+        raw_data = response.json()
+        alerts = raw_data.get('alerts', [])
+        
+        formatted_alerts = []
+        for alert in alerts:
+            formatted_alerts.append({
+                'event': alert.get('event', 'Weather Alert'),
+                'description': alert.get('description', 'No description available'),
+                'start': alert.get('start'),
+                'end': alert.get('end'),
+                'sender_name': alert.get('sender_name', 'Weather Service')
+            })
+        
+        return formatted_alerts
+        
+    except Exception as e:
+        print(f"Error fetching weather alerts: {e}")
+        return []

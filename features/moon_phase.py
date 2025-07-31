@@ -1,6 +1,16 @@
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta  # Add timedelta here
 import math
+
+# 
+# 
+# Constants for moon phase calculations
+
+LUNAR_CYCLE = 29.53059  # Average length of a lunar cycle
+
+LUNAR_CYCLE = 29.53059  # Average length of a lunar cycle           
+
+
 
 def calculate_moon_phase(date=None):
     """
@@ -114,7 +124,7 @@ def get_next_full_moon(date=None):
     else:
         days_until_full = (1.0 - current_phase + 0.5) * 29.53059
     
-    next_full_moon = date + datetime.timedelta(days=days_until_full)
+    next_full_moon = date + timedelta(days=days_until_full)
     return next_full_moon
 
 def get_next_new_moon(date=None):
@@ -132,7 +142,7 @@ def get_next_new_moon(date=None):
     else:
         days_until_new = (1.0 - current_phase) * 29.53059
     
-    next_new_moon = date + datetime.timedelta(days=days_until_new)
+    next_new_moon = date + timedelta(days=days_until_new)
     return next_new_moon
 
 # Example usage and testing
