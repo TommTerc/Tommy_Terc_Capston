@@ -7,67 +7,157 @@ from datetime import datetime
 # Name of the SQLite database file
 DB_NAME = 'weather_data.db'
 # Name of the CSV file
-CSV_FILE = 'weather_data.csv'
+CSV_FILE = 'weather_data.csv'  # This will create the new format
 
 # Initializes the database and creates the weather table if it doesn't exist
 def init_db():
     # Connect to the SQLite database (creates file if it doesn't exist)
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    # Create the weather table with columns for city, country, temperature, and description
+    # Create the weather table with expanded columns for all weather data
     c.execute('''
         CREATE TABLE IF NOT EXISTS weather (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             city TEXT,
+            state TEXT DEFAULT "",
             country TEXT,
             temperature REAL,
+            feels_like REAL,
+            humidity INTEGER,
+            precipitation REAL,
+            pressure REAL,
+            wind_speed REAL,
+            wind_direction INTEGER,
+            visibility REAL,
+            sunrise TEXT,
+            sunset TEXT,
             description TEXT,
             timestamp TEXT
         )
     ''')
     conn.commit()
     conn.close()
+    
+    # Run migration to add missing columns to existing databases
+    migrate_database()
+
+def migrate_database():
+    """Add missing columns to existing database."""
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        
+        # Check if state column exists
+        c.execute("PRAGMA table_info(weather)")
+        columns = [column[1] for column in c.fetchall()]
+        
+        # Add state column if it doesn't exist
+        if 'state' not in columns:
+            c.execute('ALTER TABLE weather ADD COLUMN state TEXT DEFAULT ""')
+            print("Added state column to database")
+        
+        conn.commit()
+        conn.close()
+    except sqlite3.Error as e:
+        print(f"Error migrating database: {e}")
 
 # Saves weather data to both SQLite database and CSV file
 def save_weather_data(data):
     try:
-        # Save to SQLite database (existing functionality)
+        # Save to SQLite database (updated for new fields)
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = datetime.now().strftime('%m-%d-%y %H:%M:%S')
+        
+        # Extract all data fields with defaults
+        city = data.get('city', '')
+        state = data.get('state', '')  # You may need to add state to your API response
+        country = data.get('country', '')
+        temperature = data.get('temperature', 0)
+        feels_like = data.get('feels_like', 0)
+        humidity = data.get('humidity', 0)
+        precipitation = data.get('precipitation', 0)
+        pressure = data.get('pressure', 0)
+        wind_speed = data.get('wind_speed', data.get('wind', {}).get('speed', 0))
+        wind_direction = data.get('wind_deg', data.get('wind', {}).get('deg', 0))
+        visibility = data.get('visibility', 0)
+        
+        # Format sunrise/sunset times
+        sunrise = ''
+        sunset = ''
+        if data.get('sunrise'):
+            sunrise = datetime.fromtimestamp(data['sunrise']).strftime('%H:%M:%S')
+        if data.get('sunset'):
+            sunset = datetime.fromtimestamp(data['sunset']).strftime('%H:%M:%S')
+        
+        description = data.get('description', '')
+        
         c.execute('''
-            INSERT INTO weather (city, country, temperature, description, timestamp)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (data['city'], data['country'], data['temperature'], data['description'], timestamp))
+            INSERT INTO weather (city, state, country, temperature, feels_like, humidity, 
+                               precipitation, pressure, wind_speed, wind_direction, visibility,
+                               sunrise, sunset, description, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (city, state, country, temperature, feels_like, humidity, precipitation,
+              pressure, wind_speed, wind_direction, visibility, sunrise, sunset, description, timestamp))
         conn.commit()
         conn.close()
         
-        # Also save to CSV file (new functionality)
+        # Also save to CSV file
         save_to_csv(data)
         
     except sqlite3.Error as e:
         print(f"Error saving weather data: {e}")
 
-# Save weather data to CSV file
+# Save weather data to CSV file with your specified format
 def save_to_csv(data):
     try:
         file_exists = os.path.exists(CSV_FILE)
         
         with open(CSV_FILE, 'a', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ['timestamp', 'city', 'country', 'temperature', 'description']
+            # Define fieldnames to match your exact format
+            fieldnames = [
+                'current time (mm-dd-yy hh:mm:ss)', 'City ', 'State', 'Country', 'Temperature', 
+                'Feels Like', 'Humidity', 'Precipitation', 'Pressure', 
+                'Wind Speed', 'Wind Direction', 'Visibility', 'Sunrise', 'Sunset'
+            ]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             
             # Write header if file is new
             if not file_exists:
                 writer.writeheader()
             
-            # Write data row
+            # Format current time as mm-dd-yy hh:mm:ss
+            current_time = datetime.now().strftime('%m-%d-%y %H:%M:%S')
+            
+            # Extract wind data
+            wind_data = data.get('wind', {})
+            wind_speed = data.get('wind_speed', wind_data.get('speed', 0))
+            wind_direction = data.get('wind_deg', wind_data.get('deg', 0))
+            
+            # Format sunrise/sunset times
+            sunrise = ''
+            sunset = ''
+            if data.get('sunrise'):
+                sunrise = datetime.fromtimestamp(data['sunrise']).strftime('%H:%M:%S')
+            if data.get('sunset'):
+                sunset = datetime.fromtimestamp(data['sunset']).strftime('%H:%M:%S')
+            
+            # Write data row with exact field names
             writer.writerow({
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'city': data['city'],
-                'country': data['country'],
-                'temperature': data['temperature'],
-                'description': data['description']
+                'current time (mm-dd-yy hh:mm:ss)': current_time,
+                'City ': data.get('city', ''),
+                'State': data.get('state', ''),
+                'Country': data.get('country', ''),
+                'Temperature': data.get('temperature', 0),
+                'Feels Like': data.get('feels_like', 0),
+                'Humidity': data.get('humidity', 0),
+                'Precipitation': data.get('precipitation', 0),
+                'Pressure': data.get('pressure', 0),
+                'Wind Speed': wind_speed,
+                'Wind Direction': wind_direction,
+                'Visibility': data.get('visibility', 0),
+                'Sunrise': sunrise,
+                'Sunset': sunset
             })
             
     except Exception as e:
@@ -79,17 +169,35 @@ def load_weather_data():
         # Connect to the database
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
-        # Select the most recent weather entry
-        c.execute('SELECT city, country, temperature, description FROM weather ORDER BY id DESC LIMIT 1')
+        # Select the most recent weather entry with all fields
+        c.execute('''SELECT city, state, country, temperature, feels_like, humidity, 
+                            precipitation, pressure, wind_speed, wind_direction, visibility,
+                            sunrise, sunset, description 
+                     FROM weather ORDER BY id DESC LIMIT 1''')
         row = c.fetchone()
         conn.close()
         # If data exists, return it as a dictionary
         if row:
             return {
                 'city': row[0],
-                'country': row[1],
-                'temperature': row[2],
-                'description': row[3]
+                'state': row[1],
+                'country': row[2],
+                'temperature': row[3],
+                'feels_like': row[4],
+                'humidity': row[5],
+                'precipitation': row[6],
+                'pressure': row[7],
+                'wind_speed': row[8],
+                'wind_direction': row[9],
+                'visibility': row[10],
+                'sunrise': row[11],
+                'sunset': row[12],
+                'description': row[13],
+                # Reconstruct wind data for compatibility
+                'wind': {
+                    'speed': row[8],
+                    'deg': row[9]
+                }
             }
         # If no data, return None
         return None
@@ -98,5 +206,54 @@ def load_weather_data():
         print(f"Error loading weather data: {e}")
         return None
 
+# Function to get state from coordinates (optional enhancement)
+def get_state_from_coords(lat, lon):
+    """
+    This function could be enhanced to determine state from coordinates
+    For now, returns empty string - you could integrate with a geocoding service
+    """
+    return ""
+
+def reset_database():
+    """Delete existing database and create new one with complete schema."""
+    try:
+        # Delete existing database file
+        if os.path.exists(DB_NAME):
+            os.remove(DB_NAME)
+            print(f"Deleted existing database: {DB_NAME}")
+        
+        # Create new database with complete schema
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE weather (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                city TEXT,
+                state TEXT DEFAULT "",
+                country TEXT,
+                temperature REAL,
+                feels_like REAL DEFAULT 0,
+                humidity INTEGER,
+                precipitation REAL DEFAULT 0,
+                pressure REAL,
+                wind_speed REAL DEFAULT 0,
+                wind_direction INTEGER DEFAULT 0,
+                visibility REAL DEFAULT 0,
+                sunrise TEXT DEFAULT "",
+                sunset TEXT DEFAULT "",
+                description TEXT,
+                timestamp TEXT
+            )
+        ''')
+        conn.commit()
+        conn.close()
+        print("Created new database with complete schema")
+        
+    except Exception as e:
+        print(f"Error resetting database: {e}")
+
 # Initialize the database when the module is imported
 init_db()
+
+# TEMPORARY: Reset database to fix column issues
+reset_database()  # This will now work

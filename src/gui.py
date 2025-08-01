@@ -35,9 +35,20 @@ class WeatherApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Tommy's Weather App")
-        self.root.geometry("1080x700")
+        self.root.geometry("1200x800")  # Increased size
         self.root.resizable(True, True)
         self.root.configure(bg="#6db3f2")
+
+        # Configure root grid weights for proper scaling
+        self.root.grid_rowconfigure(0, weight=0)  # Search bar - fixed height
+        self.root.grid_rowconfigure(1, weight=2)  # Main weather - expandable
+        self.root.grid_rowconfigure(2, weight=0)  # Temperature - fixed height
+        self.root.grid_rowconfigure(3, weight=0)  # Conditions - fixed height
+        self.root.grid_rowconfigure(4, weight=1)  # Forecast - expandable
+        
+        self.root.grid_columnconfigure(0, weight=2)  # Main content - larger weight
+        self.root.grid_columnconfigure(1, weight=2)  # Main content - larger weight
+        self.root.grid_columnconfigure(2, weight=1)  # Right frame - smaller weight
 
          # Initialize the alerts database
         init_alerts_db()
@@ -55,12 +66,37 @@ class WeatherApp:
         self.medium_font = font.Font(family="Helvetica", size=18,)
         self.small_font = font.Font(family="Helvetica", size=16, weight="bold")
 
+        # Initialize dark mode state
+        self.dark_mode = False
+        
+        # Define color schemes
+        self.light_colors = {
+            'bg': "#6db3f2",
+            'search_bg': "#375874",
+            'card_bg': "#2c2c2c",
+            'text': "white",
+            'search_text': "white"
+        }
+        
+        self.dark_colors = {
+            'bg': "#0d1117",           # Very dark background
+            'search_bg': "#21262d",    # Darker search bar
+            'card_bg': "#161b22",      # Dark card background
+            'card_border': "#30363d",  # Card borders
+            'text': "#f0f6fc",         # Light text
+            'search_text': "#f0f6fc",  # Light search text
+            'secondary_text': "#8b949e" # Gray text
+        }
+
         # --- Search bar and buttons ---
         search_frame = tk.Frame(self.root, bg="#375874")
-        search_frame.grid(row=0, column=0, columnspan=2, sticky="e", padx=10, pady=(10, 0))
+        search_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=10, pady=(10, 0))  # Changed columnspan to 3
         search_frame.grid_columnconfigure(0, weight=0)
         search_frame.grid_columnconfigure(1, weight=0)
         search_frame.grid_columnconfigure(2, weight=0)
+        search_frame.grid_columnconfigure(3, weight=0)
+        search_frame.grid_columnconfigure(4, weight=0)  # Dark mode button
+        search_frame.grid_columnconfigure(5, weight=1)  # Clock spacing
 
         self.city_entry = tk.Entry(search_frame, textvariable=self.city_var, font=self.medium_font, width=18)
         self.city_entry.grid(row=0, column=0, padx=10, pady=10)
@@ -74,7 +110,21 @@ class WeatherApp:
         self.favorites_menu_btn = tk.Button(search_frame, text="⭐ Favorites", font=self.small_font, command=self.show_favorites_menu)
         self.favorites_menu_btn.grid(row=0, column=3, padx=5, pady=10)
 
+        # DARK MODE TOGGLE BUTTON (NEW)
+        self.dark_mode_btn = tk.Button(search_frame, text="🌙", font=self.small_font, command=self.toggle_dark_mode)
+        self.dark_mode_btn.grid(row=0, column=4, padx=5, pady=10)
+
+        # DIGITAL CLOCK (moved to column 5)
+        self.clock_label = tk.Label(search_frame, text="", font=("Helvetica", 16, "bold"), bg="#375874", fg="white")
+        self.clock_label.grid(row=0, column=5, sticky="e", padx=(20, 10), pady=10)
+
+        # Store reference to search frame for theme updates
+        self.search_frame = search_frame
+
         self.city_entry.bind('<Return>', lambda event: self.get_weather())
+
+        # Start the clock
+        self.update_clock()
 
         self.create_main_weather_display()
         self.create_temperature_section()
@@ -83,55 +133,55 @@ class WeatherApp:
         self.right_frame_utilities()  
 
     def create_main_weather_display(self):
-        main_frame = tk.Frame(self.root, bg="#6db3f2")
-        main_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=10, )  
-        main_frame.grid_columnconfigure(1, weight=1)
-        main_frame.grid_columnconfigure(1, weight=1)
-        main_frame.grid_columnconfigure(2, weight=1)
+        self.main_frame = tk.Frame(self.root, bg="#6db3f2")  # Store reference
+        self.main_frame.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
+        self.main_frame.grid_columnconfigure(1, weight=1)
+        self.main_frame.grid_columnconfigure(1, weight=1)
+        self.main_frame.grid_columnconfigure(2, weight=1)
         
 
         # City label
-        self.city_label = tk.Label(main_frame, text="", font=self.medium_font, bg="#6db3f2", fg="white")
+        self.city_label = tk.Label(self.main_frame, text="", font=self.medium_font, bg="#6db3f2", fg="white")
         self.city_label.grid(row=0, column=0, columnspan=3, pady=(1, 5), sticky="ew")
 
         # Weather icon label (emoji placeholder)
-        self.icon_label = tk.Label(main_frame, text="☁️", font=("Helvetica", 48), bg="#6db3f2")
+        self.icon_label = tk.Label(self.main_frame, text="☁️", font=("Helvetica", 48), bg="#6db3f2")
         self.icon_label.grid(row=1, column=0, columnspan=3, pady=(0, 5), sticky="ew")
 
         # Temperature label
-        self.temp_label = tk.Label(main_frame, text="", font=self.large_font, bg="#6db3f2", fg="white")
+        self.temp_label = tk.Label(self.main_frame, text="", font=self.large_font, bg="#6db3f2", fg="white")
         self.temp_label.grid(row=2, column=0, columnspan=3, pady=(0, 5), sticky="ew")
 
         # Weather description label
-        self.desc_label = tk.Label(main_frame, text="", font=self.medium_font, bg="#6db3f2", fg="white")
+        self.desc_label = tk.Label(self.main_frame, text="", font=self.medium_font, bg="#6db3f2", fg="white")
         self.desc_label.grid(row=3, column=0, columnspan=3, pady=(0, 5), sticky="ew")
 
         # Country label
-        self.country_label = tk.Label(main_frame, text="", font=self.small_font, bg="#6db3f2", fg="white")
+        self.country_label = tk.Label(self.main_frame, text="", font=self.small_font, bg="#6db3f2", fg="white")
         self.country_label.grid(row=4, column=0, columnspan=3, pady=(0, 5), sticky="ew")
 
     def create_temperature_section(self):
-        temp_frame = tk.Frame(self.root, bg="#6db3f2")  # Changed from "#4a90e2"
-        temp_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=50, pady=10)
-        temp_frame.grid_columnconfigure(0, weight=1)
-        temp_frame.grid_columnconfigure(1, weight=1)
+        self.temp_frame = tk.Frame(self.root, bg="#6db3f2")  # Store reference
+        self.temp_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=50, pady=10)
+        self.temp_frame.grid_columnconfigure(0, weight=1)
+        self.temp_frame.grid_columnconfigure(1, weight=1)
 
         # High/Low temperature labels
-        self.high_label = tk.Label(temp_frame, text="H: 91°F", font=self.small_font, bg="#6db3f2", fg="white")  # Changed bg
+        self.high_label = tk.Label(self.temp_frame, text="H: 91°F", font=self.small_font, bg="#6db3f2", fg="white")  # Changed bg
         self.high_label.grid(row=0, column=0, padx=10, pady=5, sticky="ew")
-        self.low_label = tk.Label(temp_frame, text="L: 73°F", font=self.small_font, bg="#6db3f2", fg="white")  # Changed bg
+        self.low_label = tk.Label(self.temp_frame, text="L: 73°F", font=self.small_font, bg="#6db3f2", fg="white")  # Changed bg
         self.low_label.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
 
     def create_conditions_section(self):
-        conditions_frame = tk.Frame(self.root, bg="#6db3f2")  # Changed from "#31618a"
-        conditions_frame.grid(row=3, column=0, columnspan=2, sticky="nsew", padx=50, pady=10)
-        conditions_frame.grid_columnconfigure(0, weight=1)
-        conditions_frame.grid_columnconfigure(1, weight=1)
+        self.conditions_frame = tk.Frame(self.root, bg="#6db3f2")  # Store reference
+        self.conditions_frame.grid(row=3, column=0, columnspan=2, sticky="nsew", padx=50, pady=10)
+        self.conditions_frame.grid_columnconfigure(0, weight=1)
+        self.conditions_frame.grid_columnconfigure(1, weight=1)
 
         # Humidity and wind labels
-        self.humidity_label = tk.Label(conditions_frame, text="Humidity: 55%", font=self.small_font, bg="#6db3f2", fg="white", )  # Changed bg
+        self.humidity_label = tk.Label(self.conditions_frame, text="Humidity: 55%", font=self.small_font, bg="#6db3f2", fg="white", )  # Changed bg
         self.humidity_label.grid(row=0, column=0, padx=10, pady=5, sticky="ew")
-        self.wind_label = tk.Label(conditions_frame, text="Wind: 7 mph", font=self.small_font, bg="#6db3f2", fg="white")  # Changed bg
+        self.wind_label = tk.Label(self.conditions_frame, text="Wind: 7 mph", font=self.small_font, bg="#6db3f2", fg="white")  # Changed bg
         self.wind_label.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
 
     def create_forecast_section(self):
@@ -150,26 +200,28 @@ class WeatherApp:
         self.show_last_weather()
 
     def create_forecast_card(self, parent, day_offset):
-        # Create a single forecast card (day, icon, temp) for the forecast row
-        card_font = font.Font(family="Helvetica", size=18, weight="bold")  # Increased from 16
-        temp_font = font.Font(family="Helvetica", size=16)  # Increased from 14
+        card_font = font.Font(family="Helvetica", size=16, weight="bold")
+        temp_font = font.Font(family="Helvetica", size=14)
         
-        # Add black border to the frame - make it larger
-        frame = tk.Frame(parent, bg="#4a90e2", bd=2, relief="solid", highlightbackground="black", highlightthickness=2)
-        frame.grid(row=0, column=day_offset, padx=6, pady=4, sticky="nsew")  # Increased padx and pady
+        # Create frame with better sizing
+        frame = tk.Frame(parent, bg="#4a90e2", bd=2, relief="solid", highlightbackground="black", highlightthickness=1)
+        frame.grid(row=0, column=day_offset, padx=8, pady=8, sticky="nsew")
         
-        # Make the frame have a minimum size
-        frame.config(width=150, height=120)  # Set minimum dimensions
-        frame.grid_propagate(False)  # Prevent frame from shrinking
+        # Configure internal grid weights
+        frame.grid_rowconfigure(0, weight=0)  # Day
+        frame.grid_rowconfigure(1, weight=1)  # Icon - expandable
+        frame.grid_rowconfigure(2, weight=0)  # Temperature
+        frame.grid_columnconfigure(0, weight=1)
         
+        # Use grid instead of pack for better control
         day_label = tk.Label(frame, text="", font=card_font, bg="#4a90e2", fg="white")
-        day_label.pack(pady=(8,2), fill="x")  # Increased padding
+        day_label.grid(row=0, column=0, pady=(10,5), sticky="ew")
         
-        icon_label = tk.Label(frame, text="", font=("Helvetica", 36), bg="#4a90e2")  # Increased from 28
-        icon_label.pack(fill="x", pady=4)  # Added padding
+        icon_label = tk.Label(frame, text="", font=("Helvetica", 40), bg="#4a90e2")
+        icon_label.grid(row=1, column=0, pady=8, sticky="nsew")
         
         temp_label = tk.Label(frame, text="", font=temp_font, bg="#4a90e2", fg="white")
-        temp_label.pack(pady=(2,8), fill="x")  # Increased padding
+        temp_label.grid(row=2, column=0, pady=(5,10), sticky="ew")
         
         return day_label, icon_label, temp_label
     
@@ -386,55 +438,19 @@ class WeatherApp:
 
     def right_frame_utilities(self):
         # Create right frame that spans alongside the main content
-        right_frame = tk.Frame(self.root, bg="#6db3f2")
-        right_frame.grid(row=1, column=2, rowspan=4, sticky="nsew", padx=(0, 10), pady=10)
-        right_frame.grid_rowconfigure(0, weight=1)
-        right_frame.grid_rowconfigure(1, weight=1)
-        right_frame.grid_rowconfigure(2, weight=1)
-        right_frame.grid_rowconfigure(3, weight=1)
-        right_frame.grid_rowconfigure(4, weight=1)  # Add row for weather alerts
-        right_frame.grid_columnconfigure(0, weight=1)
-        right_frame.grid_columnconfigure(1, weight=1)
-
-
+        self.right_frame = tk.Frame(self.root, bg="#6db3f2")
+        self.right_frame.grid(row=1, column=2, rowspan=4, sticky="nsew", padx=(10, 10), pady=10)
         
-        # WEATHER ALERTS CARD (First - most important)
-        alerts_frame = tk.Frame(right_frame, height=10, bg="#2c2c2c", relief="solid", bd=1)
-        alerts_frame.grid(row=1, column=1, sticky="nswe", padx=30, pady=10)  # Changed: row=0, column=0, increased pady
+        # Configure right frame grid weights for proper scaling
+        for i in range(5):
+            self.right_frame.grid_rowconfigure(i, weight=1)
+        self.right_frame.grid_columnconfigure(0, weight=1)
+        self.right_frame.grid_columnconfigure(1, weight=1)
 
-        tk.Label(alerts_frame, text="⚠️ WEATHER ALERTS", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
-        self.alert_title_label = tk.Label(alerts_frame, text="Heat Advisory & 1 More", font=("Helvetica", 16, "bold"), bg="#2c2c2c", fg="white")
-        self.alert_title_label.grid(row=1, column=0, sticky="w", padx=15, pady=(5, 0))
-        
-        self.alert_desc_label = tk.Label(alerts_frame, text="Heat Advisory. These conditions are expected by\n11:00 AM (EDT), Friday, July 25. Additional alert: Air\nQuality Alert.", 
-                                        font=("Helvetica", 9), bg="#2c2c2c", fg="white", justify="left", wraplength=250)
-        self.alert_desc_label.grid(row=2, column=0, sticky="w", padx=12, pady=(5, 0))
-        
-        tk.Label(alerts_frame, text="National Weather Service", font=("Helvetica", 8), bg="#2c2c2c", fg="gray").grid(row=3, column=0, sticky="w", padx=10, pady=(5, 8))
-
-        # SUNRISE/SUNSET CARD (Second position - under weather alerts)
-        sunrise_sunset_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        sunrise_sunset_frame.grid(row=2, column=1, sticky="nsew", padx=30, pady=10)  # row=2, column=1 (under alerts)
-        sunrise_sunset_frame.grid_columnconfigure(0, weight=1)
-
-        tk.Label(sunrise_sunset_frame, text="🌅 SUNRISE & SUNSET", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
-
-        # Sunrise label
-        self.sunrise_label = tk.Label(sunrise_sunset_frame, text="Sunrise: 6:45 AM", font=("Helvetica", 14, "bold"), bg="#2c2c2c", fg="white")
-        self.sunrise_label.grid(row=1, column=0, sticky="w", padx=10, pady=(5, 2))
-
-        # Sunset label  
-        self.sunset_label = tk.Label(sunrise_sunset_frame, text="Sunset: 7:32 PM", font=("Helvetica", 14, "bold"), bg="#2c2c2c", fg="white")
-        self.sunset_label.grid(row=2, column=0, sticky="w", padx=10, pady=(2, 5))
-
-        # Day length info
-        self.day_length_label = tk.Label(sunrise_sunset_frame, text="Day length: 12h 47m", font=("Helvetica", 10), bg="#2c2c2c", fg="gray")
-        self.day_length_label.grid(row=3, column=0, sticky="w", padx=10, pady=(0, 8))
-
-        # Precipitation card (moved to third position)  
-        precip_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        precip_frame.grid(row=1, column=0, sticky="nsew", pady=5)  # Keep this the same
-        precip_frame.grid_columnconfigure(0, weight=1)
+        # Update all card grids with consistent padding
+        # PRECIPITATION CARD
+        precip_frame = tk.Frame(self.right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        precip_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
         
         tk.Label(precip_frame, text="💧 PRECIPITATION", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
         self.precip_label = tk.Label(precip_frame, text='0"', font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
@@ -443,20 +459,18 @@ class WeatherApp:
         self.precip_next_label = tk.Label(precip_frame, text="Next expected is .6\" Sun.", font=("Helvetica", 11), bg="#2c2c2c", fg="white")
         self.precip_next_label.grid(row=3, column=0, sticky="w", padx=10, pady=(0, 8))
 
-        # Feels like card
-        feels_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        feels_frame.grid(row=2, column=0, sticky="nsew", pady=5)
-        feels_frame.grid_columnconfigure(0, weight=1)
+        # FEELS LIKE CARD  
+        feels_frame = tk.Frame(self.right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        feels_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
         
         tk.Label(feels_frame, text="🌡️ FEELS LIKE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
         self.feels_like_label = tk.Label(feels_frame, text="74°", font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
         self.feels_like_label.grid(row=1, column=0, sticky="w", padx=10)
         tk.Label(feels_frame, text="Wind is making it feel cooler.", font=("Helvetica", 11), bg="#2c2c2c", fg="white").grid(row=2, column=0, sticky="w", padx=10, pady=(0, 8))
 
-        # Pressure card
-        pressure_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        pressure_frame.grid(row=3, column=0, sticky="nsew", pady=5)
-        pressure_frame.grid_columnconfigure(0, weight=1)
+        # PRESSURE CARD
+        pressure_frame = tk.Frame(self.right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        pressure_frame.grid(row=2, column=0, sticky="nsew", padx=5, pady=5)
         
         tk.Label(pressure_frame, text="🔘 PRESSURE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
         
@@ -465,10 +479,9 @@ class WeatherApp:
         
         tk.Label(pressure_frame, text="Low                    High", font=("Helvetica", 10), bg="#2c2c2c", fg="white").grid(row=2, column=0, padx=10, pady=(0, 8))
 
-        # Averages card
-        averages_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        averages_frame.grid(row=4, column=0, sticky="nsew", pady=(5, 0))
-        averages_frame.grid_columnconfigure(0, weight=1)
+        # AVERAGES CARD
+        averages_frame = tk.Frame(self.right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        averages_frame.grid(row=3, column=0, sticky="nsew", padx=5, pady=5)
         
         tk.Label(averages_frame, text="📊 AVERAGES", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
         self.avg_temp_label = tk.Label(averages_frame, text="+14°", font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
@@ -489,9 +502,62 @@ class WeatherApp:
         self.avg_high_label = tk.Label(comparison_frame, text="H:82°", font=("Helvetica", 10), bg="#2c2c2c", fg="white")
         self.avg_high_label.grid(row=1, column=1, sticky="e", pady=(0, 8))
 
-        # Moon phase card (move to row 4, column 1)
-        moon_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        moon_frame.grid(row=4, column=1, sticky="nsew", padx=30, pady=10)  # Changed from row=3 to row=4
+        # WEATHER ALERTS CARD
+        alerts_frame = tk.Frame(self.right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        alerts_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+
+        tk.Label(alerts_frame, text="⚠️ WEATHER ALERTS", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
+        self.alert_title_label = tk.Label(alerts_frame, text="Heat Advisory & 1 More", font=("Helvetica", 16, "bold"), bg="#2c2c2c", fg="white")
+        self.alert_title_label.grid(row=1, column=0, sticky="w", padx=15, pady=(5, 0))
+        
+        self.alert_desc_label = tk.Label(alerts_frame, text="Heat Advisory. These conditions are expected by\n11:00 AM (EDT), Friday, July 25. Additional alert: Air\nQuality Alert.", 
+                                        font=("Helvetica", 9), bg="#2c2c2c", fg="white", justify="left", wraplength=250)
+        self.alert_desc_label.grid(row=2, column=0, sticky="w", padx=12, pady=(5, 0))
+        
+        tk.Label(alerts_frame, text="National Weather Service", font=("Helvetica", 8), bg="#2c2c2c", fg="gray").grid(row=3, column=0, sticky="w", padx=10, pady=(5, 8))
+
+        # SUNRISE/SUNSET CARD
+        sunrise_sunset_frame = tk.Frame(self.right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        sunrise_sunset_frame.grid(row=1, column=1, sticky="nsew", padx=5, pady=5)  # row=2, column=1 (under alerts)
+        sunrise_sunset_frame.grid_columnconfigure(0, weight=1)
+
+        tk.Label(sunrise_sunset_frame, text="🌅 SUNRISE & SUNSET", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
+
+        # Sunrise label
+        self.sunrise_label = tk.Label(sunrise_sunset_frame, text="Sunrise: 6:45 AM", font=("Helvetica", 14, "bold"), bg="#2c2c2c", fg="white")
+        self.sunrise_label.grid(row=1, column=0, sticky="w", padx=10, pady=(5, 2))
+
+        # Sunset label  
+        self.sunset_label = tk.Label(sunrise_sunset_frame, text="Sunset: 7:32 PM", font=("Helvetica", 14, "bold"), bg="#2c2c2c", fg="white")
+        self.sunset_label.grid(row=2, column=0, sticky="w", padx=10, pady=(2, 5))
+
+        # Day length info
+        self.day_length_label = tk.Label(sunrise_sunset_frame, text="Day length: 12h 47m", font=("Helvetica", 10), bg="#2c2c2c", fg="gray")
+        self.day_length_label.grid(row=3, column=0, sticky="w", padx=10, pady=(0, 8))
+
+        # UV INDEX CARD (NEW - Add in row 3, column 1)
+        uv_frame = tk.Frame(self.right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        uv_frame.grid(row=2, column=1, sticky="nsew", padx=5, pady=5)
+        uv_frame.grid_columnconfigure(0, weight=1)
+
+        tk.Label(uv_frame, text="☀️ UV INDEX", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
+        
+        # UV Index value (large display)
+        self.uv_index_label = tk.Label(uv_frame, text="8", font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
+        self.uv_index_label.grid(row=1, column=0, padx=10, pady=(5, 0))
+        
+        # UV level description
+        self.uv_level_label = tk.Label(uv_frame, text="Very High", font=("Helvetica", 14, "bold"), bg="#2c2c2c", fg="white")
+        self.uv_level_label.grid(row=2, column=0, padx=10, pady=(0, 2))
+        
+        # UV advice
+        self.uv_advice_label = tk.Label(uv_frame, text="Use sunscreen, wear protective\nclothing and sunglasses.", 
+                                       font=("Helvetica", 9), bg="#2c2c2c", fg="white", justify="left")
+        self.uv_advice_label.grid(row=3, column=0, padx=10, pady=(0, 8))
+
+        # MOON PHASE CARD
+        moon_frame = tk.Frame(self.right_frame, bg="#2c2c2c", relief="solid", bd=1)
+        moon_frame.grid(row=3, column=1, sticky="nsew", padx=5, pady=5)
         moon_frame.grid_columnconfigure(0, weight=1)
 
         tk.Label(moon_frame, text="🌙 MOON PHASE", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
@@ -511,26 +577,6 @@ class WeatherApp:
         # Next full moon
         self.moon_next_label = tk.Label(moon_frame, text="Next full moon: In 29 days", font=("Helvetica", 9), bg="#2c2c2c", fg="gray")
         self.moon_next_label.grid(row=4, column=0, padx=10, pady=(0, 8))
-
-        # UV INDEX CARD (NEW - Add in row 3, column 1)
-        uv_frame = tk.Frame(right_frame, bg="#2c2c2c", relief="solid", bd=1)
-        uv_frame.grid(row=3, column=1, sticky="nsew", padx=30, pady=10)
-        uv_frame.grid_columnconfigure(0, weight=1)
-
-        tk.Label(uv_frame, text="☀️ UV INDEX", font=("Helvetica", 10), bg="#2c2c2c", fg="gray").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
-        
-        # UV Index value (large display)
-        self.uv_index_label = tk.Label(uv_frame, text="8", font=("Helvetica", 32, "bold"), bg="#2c2c2c", fg="white")
-        self.uv_index_label.grid(row=1, column=0, padx=10, pady=(5, 0))
-        
-        # UV level description
-        self.uv_level_label = tk.Label(uv_frame, text="Very High", font=("Helvetica", 14, "bold"), bg="#2c2c2c", fg="white")
-        self.uv_level_label.grid(row=2, column=0, padx=10, pady=(0, 2))
-        
-        # UV advice
-        self.uv_advice_label = tk.Label(uv_frame, text="Use sunscreen, wear protective\nclothing and sunglasses.", 
-                                       font=("Helvetica", 9), bg="#2c2c2c", fg="white", justify="left")
-        self.uv_advice_label.grid(row=3, column=0, padx=10, pady=(0, 8))
 
         # Bind moon phase update to the weather data fetch
         self.original_display_weather = self.display_weather
@@ -679,6 +725,156 @@ class WeatherApp:
             print(f"Error updating right frame cards: {e}")
             import traceback
             traceback.print_exc()
+    
+    def update_clock(self):
+        """Update the digital clock display."""
+        try:
+            # Get current time
+            now = datetime.now()
+            
+            # Format time as HH:MM:SS AM/PM
+            time_string = now.strftime("%I:%M:%S %p")
+            
+            # Format date as Day, Month DD, YYYY
+            date_string = now.strftime("%A, %B %d, %Y")
+            
+            # Update clock label with time and date
+            clock_text = f"{time_string}\n{date_string}"
+            self.clock_label.config(text=clock_text)
+            
+            # Schedule next update in 1000ms (1 second)
+            self.root.after(1000, self.update_clock)
+            
+        except Exception as e:
+            print(f"Error updating clock: {e}")
+            # Try again in 1 second even if there's an error
+            self.root.after(1000, self.update_clock)
+
+    def get_timezone_time(self, timezone_offset=None):
+        """Get time for a specific timezone (for future enhancement)."""
+        if timezone_offset is not None:
+            # Convert timezone offset from seconds to hours
+            offset_hours = timezone_offset / 3600
+            utc_time = datetime.utcnow()
+            local_time = utc_time + timedelta(hours=offset_hours)
+            return local_time
+        else:
+            return datetime.now()
+
+    def toggle_dark_mode(self):
+        """Toggle between light and dark mode."""
+        self.dark_mode = not self.dark_mode
+        
+        if self.dark_mode:
+            # Switch to dark mode
+            colors = self.dark_colors
+            self.dark_mode_btn.config(text="☀️")  # Sun icon for switching back to light
+        else:
+            # Switch to light mode
+            colors = self.light_colors
+            self.dark_mode_btn.config(text="🌙")  # Moon icon for switching to dark
+        
+        # Update all UI elements
+        self.apply_theme(colors)
+
+    def apply_theme(self, colors):
+        """Apply the selected color theme to all UI elements."""
+        try:
+            # Update root window
+            self.root.configure(bg=colors['bg'])
+            
+            # Update search frame
+            self.search_frame.configure(bg=colors['search_bg'])
+            self.clock_label.configure(bg=colors['search_bg'], fg=colors['search_text'])
+            
+            # Update main weather display
+            if hasattr(self, 'main_frame'):
+                self.main_frame.configure(bg=colors['bg'])
+                self.city_label.configure(bg=colors['bg'], fg=colors['text'])
+                self.icon_label.configure(bg=colors['bg'])
+                self.temp_label.configure(bg=colors['bg'], fg=colors['text'])
+                self.desc_label.configure(bg=colors['bg'], fg=colors['text'])
+                self.country_label.configure(bg=colors['bg'], fg=colors['text'])
+            
+            # Update temperature section
+            if hasattr(self, 'temp_frame'):
+                self.temp_frame.configure(bg=colors['bg'])
+                self.high_label.configure(bg=colors['bg'], fg=colors['text'])
+                self.low_label.configure(bg=colors['bg'], fg=colors['text'])
+            
+            # Update conditions section
+            if hasattr(self, 'conditions_frame'):
+                self.conditions_frame.configure(bg=colors['bg'])
+                self.humidity_label.configure(bg=colors['bg'], fg=colors['text'])
+                self.wind_label.configure(bg=colors['bg'], fg=colors['text'])
+            
+            # Update forecast section
+            if hasattr(self, 'forecast_frame'):
+                self.forecast_frame.configure(bg=colors['bg'])
+            
+            # Update right frame
+            if hasattr(self, 'right_frame'):
+                self.right_frame.configure(bg=colors['bg'])
+            
+            # Update all right frame cards
+            self.update_right_frame_theme(colors)
+            
+        except Exception as e:
+            print(f"Error applying theme: {e}")
+
+    def update_right_frame_theme(self, colors):
+        """Update the theme for all right frame cards."""
+        try:
+            # List of all card frames and their labels
+            card_elements = [
+                # Weather alerts card
+                ('alerts_frame', [
+                    'alert_title_label', 'alert_desc_label'
+                ]),
+                # Sunrise/sunset card
+                ('sunrise_sunset_frame', [
+                    'sunrise_label', 'sunset_label', 'day_length_label'
+                ]),
+                # Precipitation card
+                ('precip_frame', [
+                    'precip_label', 'precip_next_label'
+                ]),
+                # Feels like card
+                ('feels_frame', [
+                    'feels_like_label'
+                ]),
+                # Pressure card
+                ('pressure_frame', [
+                    'pressure_label'
+                ]),
+                # Averages card
+                ('averages_frame', [
+                    'avg_temp_label', 'today_high_label', 'avg_high_label'
+                ]),
+                # Moon phase card
+                ('moon_frame', [
+                    'moon_phase_label', 'moon_name_label', 'moon_illumination_label', 'moon_next_label'
+                ]),
+                # UV index card
+                ('uv_frame', [
+                    'uv_index_label', 'uv_level_label', 'uv_advice_label'
+                ])
+            ]
+            
+            # Update each card
+            for frame_name, label_names in card_elements:
+                if hasattr(self, frame_name):
+                    frame = getattr(self, frame_name)
+                    frame.configure(bg=colors['card_bg'])
+                    
+                    # Update all child widgets in the frame
+                    for widget in frame.winfo_children():
+                        if isinstance(widget, tk.Label):
+                            if widget.cget('fg') in ['white', 'gray', '#ff8800']:
+                                widget.configure(bg=colors['card_bg'])
+        
+        except Exception as e:
+            print(f"Error updating right frame theme: {e}")
 #
 # Run the app if this file is executed directly
 if __name__ == "__main__":

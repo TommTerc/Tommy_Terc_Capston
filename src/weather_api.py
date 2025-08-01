@@ -16,17 +16,20 @@ def get_coordinates(city):
         data = response.json()
         
         if data:
-            return data[0]['lat'], data[0]['lon'], data[0]['name'], data[0]['country']
-        return None, None, None, None
+            location = data[0]
+            # Extract state if available (usually in 'state' field for US locations)
+            state = location.get('state', '')
+            return location['lat'], location['lon'], location['name'], location['country'], state
+        return None, None, None, None, None
         
     except Exception as e:
         print(f"Error getting coordinates: {e}")
-        return None, None, None, None
+        return None, None, None, None, None
 
 def fetch_weather_data(city):
     """Fetch comprehensive weather data using One Call API 3.0"""
-    # First get coordinates
-    lat, lon, city_name, country = get_coordinates(city)
+    # First get coordinates including state
+    lat, lon, city_name, country, state = get_coordinates(city)
     
     if not lat or not lon:
         print(f"Could not find coordinates for {city}")
@@ -46,6 +49,7 @@ def fetch_weather_data(city):
         # Extract comprehensive weather data
         data = {
             'city': city_name,
+            'state': state,  # Add this line
             'country': country,
             'lat': lat,
             'lon': lon,
@@ -97,7 +101,7 @@ def fetch_weather_data(city):
 def fetch_5day_forecast(city):
     """Fetch 5-day forecast using One Call API 3.0 daily data"""
     # First get coordinates
-    lat, lon, city_name, country = get_coordinates(city)
+    lat, lon, city_name, country, state = get_coordinates(city)
     
     if not lat or not lon:
         return []
