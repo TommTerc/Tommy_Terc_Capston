@@ -1,12 +1,18 @@
+import sys
+import os
+
+# Add the project root directory to the Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
+
+# Keep existing imports below:
 import tkinter as tk
 from tkinter import font, messagebox
 import sys
 import os
 from dotenv import load_dotenv
-from tkinter import messagebox
 import requests
 from datetime import datetime, timedelta
-
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,12 +23,12 @@ if not API_KEY:
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-
 from src.weather_api import fetch_weather_data, fetch_5day_forecast
 from data.storage import load_weather_data, save_weather_data
 from src.utils import format_wind_info, format_humidity
 from features.favorite_cities import add_favorite_city, get_favorite_cities, is_favorite_city, remove_favorite_city
 from features.weather_alert import check_weather_alerts, add_alert_rule, init_alerts_db
+from features.team_feature import CitySuggestionApp
 
 
 # Mock data import for testing purposes
@@ -52,10 +58,6 @@ class WeatherApp:
 
         # Initialize the alerts database
         init_alerts_db()
-        # Check for weather alerts  
-        
-
-
         
         # Initialize variables
         self.city_var = tk.StringVar()
@@ -103,22 +105,26 @@ class WeatherApp:
         self.city_entry = tk.Entry(search_frame, textvariable=self.city_var, font=self.medium_font, width=18)
         self.city_entry.grid(row=0, column=0, padx=10, pady=10)
 
-        self.search_btn = tk.Button(search_frame, text="Get Weather", font=self.small_font, command=self.get_weather)
-        self.search_btn.grid(row=0, column=1, padx=5, pady=10)
+        # Get Weather button (existing)
+        self.get_weather_btn = tk.Button(search_frame, text="Get Weather", font=self.small_font, command=self.get_weather)
+        self.get_weather_btn.grid(row=0, column=1, padx=5, pady=10)
 
-        self.favorite_btn = tk.Button(search_frame, text="🤍", font=self.small_font, command=self.toggle_favorite)
-        self.favorite_btn.grid(row=0, column=2, padx=5, pady=10)
+        # Favorites button (existing)
+        self.favorites_btn = tk.Button(search_frame, text="⭐ Favorites", font=self.small_font, command=self.show_favorites_menu)
+        self.favorites_btn.grid(row=0, column=2, padx=5, pady=10)
 
-        self.favorites_menu_btn = tk.Button(search_frame, text="⭐ Favorites", font=self.small_font, command=self.show_favorites_menu)
-        self.favorites_menu_btn.grid(row=0, column=3, padx=5, pady=10)
-
-        # DARK MODE TOGGLE BUTTON (NEW)
+        # Dark Mode toggle (existing)
         self.dark_mode_btn = tk.Button(search_frame, text="🌙", font=self.small_font, command=self.toggle_dark_mode)
-        self.dark_mode_btn.grid(row=0, column=4, padx=5, pady=10)
+        self.dark_mode_btn.grid(row=0, column=3, padx=5, pady=10)
 
-        # DIGITAL CLOCK (moved to column 5)
+        # DIGITAL CLOCK (moved to column 4)
         self.clock_label = tk.Label(search_frame, text="", font=("Helvetica", 16, "bold"), bg="#375874", fg="white")
         self.clock_label.grid(row=0, column=5, sticky="e", padx=(20, 10), pady=10)
+
+        # Suggest Cities button
+        self.suggest_cities_btn = tk.Button(search_frame, text="🏙️ Suggest Cities", font=self.small_font, 
+                                            command=self.show_city_recommendations)
+        self.suggest_cities_btn.grid(row=0, column=4, padx=5, pady=10)
 
         # Store reference to search frame for theme updates
         self.search_frame = search_frame
@@ -405,7 +411,7 @@ class WeatherApp:
         # Create a simple selection window
         favorites_window = tk.Toplevel(self.root)
         favorites_window.title("Favorite Cities")
-        favorites_window.geometry("300x400")
+        favorites_window.geometry("400x500")
         favorites_window.configure(bg="#6db3f2")
         
         tk.Label(favorites_window, text="Favorite Cities", font=self.medium_font, bg="#6db3f2", fg="white").pack(pady=10)
@@ -906,6 +912,11 @@ class WeatherApp:
                     temp_label.configure(bg=current_bg)
         except Exception as e:
             print(f"Error updating right frame theme: {e}")
+    
+    def show_city_recommendations(self):
+        """Show the city recommendation feature."""
+        app = CitySuggestionApp(self.root)
+        app.show_preference_dialog()
 #
 # Run the app if this file is executed directly
 if __name__ == "__main__":

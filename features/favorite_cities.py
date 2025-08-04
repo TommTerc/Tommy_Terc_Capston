@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import tkinter as tk
 
 # Database name for favorite cities
 FAVORITES_DB = 'favorites.db'
@@ -139,6 +140,97 @@ def clear_all_favorites():
         return False
     finally:
         conn.close()
+
+def show_favorites_window(parent, callback=None):
+    """Display favorite cities in a window with visible buttons."""
+    # Create the window
+    favorites_window = tk.Toplevel(parent)
+    favorites_window.title("Favorite Cities")
+    favorites_window.geometry("600x900")
+    favorites_window.configure(bg="#6db3f2")  # Light blue background
+    
+    # Title label
+    title_label = tk.Label(favorites_window, text="Favorite Cities", 
+                          font=("Helvetica", 24, "bold"), bg="#6db3f2", fg="white")
+    title_label.pack(pady=20)
+    
+    # Get favorite cities
+    favorites = get_favorite_cities()
+    
+    # Create list frame with light background
+    list_frame = tk.Frame(favorites_window, bg="#f0f0f0", bd=1, relief=tk.SUNKEN)  # Light background
+    list_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 20))
+    
+    # Create scrollbar
+    scrollbar = tk.Scrollbar(list_frame)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    
+    # Create listbox for cities
+    city_listbox = tk.Listbox(list_frame, font=("Helvetica", 14), bg="#ffffff",
+                             fg="#000000", selectbackground="#4a90e2", height=10)
+    city_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    
+    # Configure scrollbar
+    scrollbar.config(command=city_listbox.yview)
+    city_listbox.config(yscrollcommand=scrollbar.set)
+    
+    # Add cities to listbox
+    for fav in favorites:
+        city_text = f"{fav['city']}, {fav['country']}"
+        city_listbox.insert(tk.END, city_text)
+    
+    # Button frame with clear background
+    button_frame = tk.Frame(favorites_window, bg="#6db3f2")
+    button_frame.pack(fill=tk.X, padx=20, pady=10)
+    
+    # Custom button function (same as in team_feature.py)
+    def create_custom_button(parent, text, bg_color, fg_color, command):
+        """Create a custom button using Frame and Label."""
+        button_frame = tk.Frame(parent, bg=bg_color, relief="raised", bd=3, cursor="hand2")
+        
+        button_label = tk.Label(button_frame, text=text, font=("Helvetica", 12, "bold"),
+                               bg=bg_color, fg=fg_color, padx=15, pady=8)
+        button_label.pack()
+        
+        # Bind click events
+        def on_click(event):
+            command()
+        
+        def on_enter(event):
+            button_frame.config(relief="solid")
+        
+        def on_leave(event):
+            button_frame.config(relief="raised")
+        
+        button_frame.bind("<Button-1>", on_click)
+        button_label.bind("<Button-1>", on_click)
+        button_frame.bind("<Enter>", on_enter)
+        button_frame.bind("<Leave>", on_leave)
+        button_label.bind("<Enter>", on_enter)
+        button_label.bind("<Leave>", on_leave)
+        
+        return button_frame
+    
+    # Load Weather function
+    def load_city():
+        selected = city_listbox.curselection()
+        if selected:
+            city_text = city_listbox.get(selected[0])
+            city, country = city_text.split(", ")
+            favorites_window.destroy()
+            if callback:
+                callback(city, country)
+    
+    # Load Weather Button - USING CUSTOM BUTTON
+    load_button = create_custom_button(button_frame, "Load Weather", "#28a745", "white", load_city)
+    load_button.pack(side=tk.LEFT, padx=5)
+    
+    # Close Button - USING CUSTOM BUTTON
+    close_button = create_custom_button(button_frame, "Close", "#6c757d", "white", favorites_window.destroy)
+    close_button.pack(side=tk.RIGHT, padx=5)
+
+    # Force rendering of buttons immediately
+    favorites_window.update_idletasks()
 
 # Initialize the favorites database when this module is imported
 init_favorites_db()

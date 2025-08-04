@@ -11,55 +11,60 @@ CSV_FILE = 'weather_data.csv'  # This will create the new format
 
 # Initializes the database and creates the weather table if it doesn't exist
 def init_db():
+    """Initialize database and ensure schema is up to date."""
     # Connect to the SQLite database (creates file if it doesn't exist)
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    # Create the weather table with expanded columns for all weather data
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS weather (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            city TEXT,
-            state TEXT DEFAULT "",
-            country TEXT,
-            temperature REAL,
-            feels_like REAL,
-            humidity INTEGER,
-            precipitation REAL,
-            pressure REAL,
-            wind_speed REAL,
-            wind_direction INTEGER,
-            visibility REAL,
-            sunrise TEXT,
-            sunset TEXT,
-            description TEXT,
-            timestamp TEXT
-        )
-    ''')
+    
+    # Get existing columns
+    c.execute("PRAGMA table_info(weather)")
+    existing_columns = [column[1] for column in c.fetchall()]
+    
+    # Create the weather table if it doesn't exist
+    if not existing_columns:
+        print("Creating new weather database table")
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS weather (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                city TEXT,
+                state TEXT DEFAULT "",
+                country TEXT,
+                temperature REAL,
+                feels_like REAL DEFAULT 0,
+                humidity INTEGER,
+                precipitation REAL DEFAULT 0,
+                pressure REAL,
+                wind_speed REAL DEFAULT 0,
+                wind_direction INTEGER DEFAULT 0,
+                visibility REAL DEFAULT 0,
+                sunrise TEXT DEFAULT "",
+                sunset TEXT DEFAULT "",
+                description TEXT,
+                timestamp TEXT
+            )
+        ''')
+    else:
+        # Check for missing columns and add them
+        required_columns = {
+            'state': 'TEXT DEFAULT ""',
+            'feels_like': 'REAL DEFAULT 0',
+            'precipitation': 'REAL DEFAULT 0',
+            'wind_speed': 'REAL DEFAULT 0',
+            'wind_direction': 'INTEGER DEFAULT 0',
+            'visibility': 'REAL DEFAULT 0',
+            'sunrise': 'TEXT DEFAULT ""',
+            'sunset': 'TEXT DEFAULT ""',
+            'description': 'TEXT'
+        }
+        
+        for column, data_type in required_columns.items():
+            if column not in existing_columns:
+                print(f"Adding missing column: {column}")
+                c.execute(f'ALTER TABLE weather ADD COLUMN {column} {data_type}')
+    
     conn.commit()
     conn.close()
-    
-    # Run migration to add missing columns to existing databases
-    migrate_database()
-
-def migrate_database():
-    """Add missing columns to existing database."""
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        
-        # Check if state column exists
-        c.execute("PRAGMA table_info(weather)")
-        columns = [column[1] for column in c.fetchall()]
-        
-        # Add state column if it doesn't exist
-        if 'state' not in columns:
-            c.execute('ALTER TABLE weather ADD COLUMN state TEXT DEFAULT ""')
-            print("Added state column to database")
-        
-        conn.commit()
-        conn.close()
-    except sqlite3.Error as e:
-        print(f"Error migrating database: {e}")
+    print("Database initialization complete")
 
 # Saves weather data to both SQLite database and CSV file
 def save_weather_data(data):
@@ -214,46 +219,5 @@ def get_state_from_coords(lat, lon):
     """
     return ""
 
-def reset_database():
-    """Delete existing database and create new one with complete schema."""
-    try:
-        # Delete existing database file
-        if os.path.exists(DB_NAME):
-            os.remove(DB_NAME)
-            print(f"Deleted existing database: {DB_NAME}")
-        
-        # Create new database with complete schema
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute('''
-            CREATE TABLE weather (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                city TEXT,
-                state TEXT DEFAULT "",
-                country TEXT,
-                temperature REAL,
-                feels_like REAL DEFAULT 0,
-                humidity INTEGER,
-                precipitation REAL DEFAULT 0,
-                pressure REAL,
-                wind_speed REAL DEFAULT 0,
-                wind_direction INTEGER DEFAULT 0,
-                visibility REAL DEFAULT 0,
-                sunrise TEXT DEFAULT "",
-                sunset TEXT DEFAULT "",
-                description TEXT,
-                timestamp TEXT
-            )
-        ''')
-        conn.commit()
-        conn.close()
-        print("Created new database with complete schema")
-        
-    except Exception as e:
-        print(f"Error resetting database: {e}")
-
 # Initialize the database when the module is imported
 init_db()
-
-# TEMPORARY: Reset database to fix column issues
-reset_database()  # This will now work
