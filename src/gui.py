@@ -94,37 +94,42 @@ class WeatherApp:
 
         # --- Search bar and buttons ---
         search_frame = tk.Frame(self.root, bg="#375874")
-        search_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=10, pady=(10, 0))  # Changed columnspan to 3
+        search_frame.grid(row=0, column=0, columnspan=3, sticky="ew", padx=10, pady=(10, 0))
         search_frame.grid_columnconfigure(0, weight=0)
         search_frame.grid_columnconfigure(1, weight=0)
         search_frame.grid_columnconfigure(2, weight=0)
-        search_frame.grid_columnconfigure(3, weight=0)
-        search_frame.grid_columnconfigure(4, weight=0)  # Dark mode button
-        search_frame.grid_columnconfigure(5, weight=1)  # Clock spacing
+        search_frame.grid_columnconfigure(3, weight=0)  # Add to Favorites button
+        search_frame.grid_columnconfigure(4, weight=0)
+        search_frame.grid_columnconfigure(5, weight=0)
+        search_frame.grid_columnconfigure(6, weight=1)  # Spacer to push clock right
+        search_frame.grid_columnconfigure(7, weight=0)  # Clock in right corner
 
         self.city_entry = tk.Entry(search_frame, textvariable=self.city_var, font=self.medium_font, width=18)
         self.city_entry.grid(row=0, column=0, padx=10, pady=10)
 
-        # Get Weather button (existing)
-        self.get_weather_btn = tk.Button(search_frame, text="Get Weather", font=self.small_font, command=self.get_weather)
+        # Get Weather button - CUSTOM STYLED
+        self.get_weather_btn = self.create_custom_nav_button(search_frame, "Get Weather", "#28a745", "white", self.get_weather)
         self.get_weather_btn.grid(row=0, column=1, padx=5, pady=10)
 
-        # Favorites button (existing)
-        self.favorites_btn = tk.Button(search_frame, text="⭐ Favorites", font=self.small_font, command=self.show_favorites_menu)
+        # Favorites button - CUSTOM STYLED
+        self.favorites_btn = self.create_custom_nav_button(search_frame, "⭐ Favorites", "#ffd700", "black", self.show_favorites_menu)
         self.favorites_btn.grid(row=0, column=2, padx=5, pady=10)
 
-        # Dark Mode toggle (existing)
-        self.dark_mode_btn = tk.Button(search_frame, text="🌙", font=self.small_font, command=self.toggle_dark_mode)
-        self.dark_mode_btn.grid(row=0, column=3, padx=5, pady=10)
+        # Add to Favorites button - ALREADY STYLED
+        self.add_favorite_btn = self.create_add_favorites_button(search_frame)
+        self.add_favorite_btn.grid(row=0, column=3, padx=5, pady=10)
 
-        # DIGITAL CLOCK (moved to column 4)
+        # Dark Mode toggle - CUSTOM STYLED
+        self.dark_mode_btn = self.create_custom_nav_button(search_frame, "🌙", "#6c757d", "white", self.toggle_dark_mode)
+        self.dark_mode_btn.grid(row=0, column=4, padx=5, pady=10)
+
+        # Suggest Cities button - CUSTOM STYLED
+        self.suggest_cities_btn = self.create_custom_nav_button(search_frame, "🏙️ Suggest Cities", "#007bff", "white", self.show_city_recommendations)
+        self.suggest_cities_btn.grid(row=0, column=5, padx=5, pady=10)
+
+        # DIGITAL CLOCK - MOVED TO RIGHT CORNER
         self.clock_label = tk.Label(search_frame, text="", font=("Helvetica", 16, "bold"), bg="#375874", fg="white")
-        self.clock_label.grid(row=0, column=5, sticky="e", padx=(20, 10), pady=10)
-
-        # Suggest Cities button
-        self.suggest_cities_btn = tk.Button(search_frame, text="🏙️ Suggest Cities", font=self.small_font, 
-                                            command=self.show_city_recommendations)
-        self.suggest_cities_btn.grid(row=0, column=4, padx=5, pady=10)
+        self.clock_label.grid(row=0, column=7, sticky="e", padx=(20, 10), pady=10)
 
         # Store reference to search frame for theme updates
         self.search_frame = search_frame
@@ -788,12 +793,16 @@ class WeatherApp:
         if self.dark_mode:
             # Switch to dark mode
             colors = self.dark_colors
-            self.dark_mode_btn.config(text="☀️")  # Sun icon for switching back to light
+            # Update the dark mode button icon and text
+            if hasattr(self, 'dark_mode_btn'):
+                self.dark_mode_btn.children['!label'].config(text="☀️")  # Sun icon for light mode
         else:
             # Switch to light mode
             colors = self.light_colors
-            self.dark_mode_btn.config(text="🌙")  # Moon icon for switching to dark
-        
+            # Update the dark mode button icon and text
+            if hasattr(self, 'dark_mode_btn'):
+                self.dark_mode_btn.children['!label'].config(text="🌙")  # Moon icon for dark mode
+    
         # Update all UI elements
         self.apply_theme(colors)
 
@@ -917,6 +926,105 @@ class WeatherApp:
         """Show the city recommendation feature."""
         app = CitySuggestionApp(self.root)
         app.show_preference_dialog()
+
+    def add_current_city_to_favorites(self):
+        """Add the currently displayed city to favorites."""
+        from features.favorite_cities import add_favorite_city
+        from tkinter import messagebox
+        
+        
+        # Get the current city from the entry field
+        current_city = self.city_var.get().strip()
+        
+        if not current_city:
+            messagebox.showwarning("No City", "Please enter or search for a city first!")
+            return
+        
+        # Try to get country from weather data if available
+        country = None
+        if hasattr(self, 'current_weather_data') and self.current_weather_data:
+            try:
+                country = self.current_weather_data.get('sys', {}).get('country', None)
+            except:
+                country = None
+        
+        # Add to favorites
+        if add_favorite_city(current_city, country):
+            messagebox.showinfo("Success", f"✅ {current_city} added to favorites!")
+            
+            # Update button text temporarily to show success
+            original_text = self.add_favorite_btn.cget('text')
+            self.add_favorite_btn.config(text="✅ Added!")
+            self.root.after(2000, lambda: self.add_favorite_btn.config(text=original_text))
+        else:
+            messagebox.showinfo("Already Added", f"📍 {current_city} is already in your favorites!")
+    
+    def create_add_favorites_button(self, parent):
+        """Create custom Add to Favorites button."""
+        button_frame = tk.Frame(parent, bg="#ff9500", relief="raised", bd=3, cursor="hand2")
+        
+        button_label = tk.Label(button_frame, text="➕ Add to Favorites", font=self.small_font,
+                               bg="#ff9500", fg="white", padx=10, pady=5)
+        button_label.pack()
+        
+        # Bind click events
+        def on_click(event):
+            self.add_current_city_to_favorites()
+        
+        def on_enter(event):
+            button_frame.config(relief="solid")
+        
+        def on_leave(event):
+            button_frame.config(relief="raised")
+        
+        button_frame.bind("<Button-1>", on_click)
+        button_label.bind("<Button-1>", on_click)
+        button_frame.bind("<Enter>", on_enter)
+        button_frame.bind("<Leave>", on_leave)
+        button_label.bind("<Enter>", on_enter)
+        button_label.bind("<Leave>", on_leave)
+        
+        return button_frame
+
+    def create_custom_nav_button(self, parent, text, bg_color, fg_color, command):
+        """Create a custom styled navigation button."""
+        button_frame = tk.Frame(parent, bg=bg_color, relief="raised", bd=3, cursor="hand2")
+        
+        button_label = tk.Label(button_frame, text=text, font=self.small_font,
+                               bg=bg_color, fg=fg_color, padx=12, pady=6)
+        button_label.pack()
+        
+        # Bind click events
+        def on_click(event):
+            command()
+    
+        def on_enter(event):
+            button_frame.config(relief="solid", bd=4)  # Slightly thicker border on hover
+            button_label.config(bg=self.lighten_color(bg_color))
+    
+        def on_leave(event):
+            button_frame.config(relief="raised", bd=3)
+            button_label.config(bg=bg_color)
+    
+        button_frame.bind("<Button-1>", on_click)
+        button_label.bind("<Button-1>", on_click)
+        button_frame.bind("<Enter>", on_enter)
+        button_frame.bind("<Leave>", on_leave)
+        button_label.bind("<Enter>", on_enter)
+        button_label.bind("<Leave>", on_leave)
+        
+        return button_frame
+
+    def lighten_color(self, color):
+        """Lighten a hex color for hover effects."""
+        color_map = {
+            "#28a745": "#34ce57",  # Green -> lighter green
+            "#ffd700": "#ffe135",  # Gold -> lighter gold  
+            "#6c757d": "#8a929b",  # Gray -> lighter gray
+            "#007bff": "#3395ff",  # Blue -> lighter blue
+            "#ff9500": "#ffb333"   # Orange -> lighter orange
+        }
+        return color_map.get(color, color)
 #
 # Run the app if this file is executed directly
 if __name__ == "__main__":

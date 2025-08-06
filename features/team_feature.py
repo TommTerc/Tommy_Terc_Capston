@@ -119,7 +119,7 @@ class CitySuggestionApp:
         """Show a loading dialog while processing data."""
         loading_dialog = tk.Toplevel(self.parent)
         loading_dialog.title("Loading...")
-        loading_dialog.geometry("350x120")
+        loading_dialog.geometry("350x220")
         loading_dialog.configure(bg="#2c3e50")
         loading_dialog.resizable(False, False)
         
