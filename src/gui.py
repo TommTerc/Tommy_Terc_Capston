@@ -8,6 +8,7 @@ sys.path.append(project_root)
 # Keep existing imports below:
 import tkinter as tk
 from tkinter import font, messagebox
+import customtkinter as ctk
 import sys
 import os
 from dotenv import load_dotenv
@@ -44,6 +45,10 @@ class WeatherApp:
         self.root.geometry("1400x900")  # Larger window
         self.root.resizable(True, True)
         self.root.configure(bg="#6db3f2")
+        
+        # Set CustomTkinter appearance
+        ctk.set_appearance_mode("light")
+        ctk.set_default_color_theme("blue")
 
         # BETTER grid configuration
         self.root.grid_rowconfigure(0, weight=0)  # Search bar
@@ -104,27 +109,43 @@ class WeatherApp:
         search_frame.grid_columnconfigure(6, weight=1)  # Spacer to push clock right
         search_frame.grid_columnconfigure(7, weight=0)  # Clock in right corner
 
-        self.city_entry = tk.Entry(search_frame, textvariable=self.city_var, font=self.medium_font, width=18)
+        self.city_entry = ctk.CTkEntry(search_frame, textvariable=self.city_var, font=("Helvetica", 16), 
+                                       placeholder_text="Enter city name...", width=250, corner_radius=12)
         self.city_entry.grid(row=0, column=0, padx=10, pady=10)
 
-        # Get Weather button - CUSTOM STYLED
-        self.get_weather_btn = self.create_custom_nav_button(search_frame, "Get Weather", "#28a745", "white", self.get_weather)
+        # Get Weather button - CustomTkinter rounded
+        self.get_weather_btn = ctk.CTkButton(search_frame, text="Get Weather", fg_color="#FF6B47", 
+                                            hover_color="#FF8C6B", text_color="white", 
+                                            corner_radius=12, font=("Helvetica", 14, "bold"),
+                                            command=self.get_weather)
         self.get_weather_btn.grid(row=0, column=1, padx=5, pady=10)
 
-        # Favorites button - CUSTOM STYLED
-        self.favorites_btn = self.create_custom_nav_button(search_frame, "⭐ Favorites", "#ffd700", "black", self.show_favorites_menu)
+        # Favorites button - CustomTkinter rounded
+        self.favorites_btn = ctk.CTkButton(search_frame, text="⭐ Favorites", fg_color="#FFB84D",
+                                          hover_color="#FFC86D", text_color="black",
+                                          corner_radius=12, font=("Helvetica", 14, "bold"),
+                                          command=self.show_favorites_menu)
         self.favorites_btn.grid(row=0, column=2, padx=5, pady=10)
 
-        # Add to Favorites button - ALREADY STYLED
-        self.add_favorite_btn = self.create_add_favorites_button(search_frame)
+        # Add to Favorites button - CustomTkinter rounded
+        self.add_favorite_btn = ctk.CTkButton(search_frame, text="➕ Add to Favorites", fg_color="#FFA500",
+                                             hover_color="#FFB84D", text_color="black",
+                                             corner_radius=12, font=("Helvetica", 14, "bold"),
+                                             command=self.add_current_city_to_favorites)
         self.add_favorite_btn.grid(row=0, column=3, padx=5, pady=10)
 
-        # Dark Mode toggle - CUSTOM STYLED
-        self.dark_mode_btn = self.create_custom_nav_button(search_frame, "🌙", "#6c757d", "white", self.toggle_dark_mode)
+        # Dark Mode toggle - CustomTkinter rounded
+        self.dark_mode_btn = ctk.CTkButton(search_frame, text="🌙 Dark Mode", fg_color="#FF8C42",
+                                          hover_color="#FFA557", text_color="white",
+                                          corner_radius=12, font=("Helvetica", 14, "bold"),
+                                          command=self.toggle_dark_mode)
         self.dark_mode_btn.grid(row=0, column=4, padx=5, pady=10)
 
-        # Suggest Cities button - CUSTOM STYLED
-        self.suggest_cities_btn = self.create_custom_nav_button(search_frame, "🏙️ Suggest Cities", "#007bff", "white", self.show_city_recommendations)
+        # Suggest Cities button - CustomTkinter rounded
+        self.suggest_cities_btn = ctk.CTkButton(search_frame, text="🏙️ Suggest Cities", fg_color="#FFAB40",
+                                               hover_color="#FFBC6D", text_color="black",
+                                               corner_radius=12, font=("Helvetica", 14, "bold"),
+                                               command=self.show_city_recommendations)
         self.suggest_cities_btn.grid(row=0, column=5, padx=5, pady=10)
 
         # DIGITAL CLOCK - MOVED TO RIGHT CORNER
@@ -222,9 +243,17 @@ class WeatherApp:
         card_font = font.Font(family="Helvetica", size=16, weight="bold")
         temp_font = font.Font(family="Helvetica", size=14, weight="bold")
         
-        # BETTER SIZED forecast cards
-        frame = tk.Frame(parent, bg="#4a90e2", bd=2, relief="solid", highlightbackground="black", highlightthickness=1)
-        frame.grid(row=0, column=day_offset, padx=8, pady=8, sticky="nsew")
+        # Outer frame for gradient border (dark gray)
+        outer_frame = tk.Frame(parent, bg="#505050", bd=0)
+        outer_frame.grid(row=0, column=day_offset, padx=8, pady=8, sticky="nsew")
+        
+        # Inner frame for gradient effect (light gray)
+        border_frame = tk.Frame(outer_frame, bg="#808080", bd=0)
+        border_frame.pack(side="top", fill="both", expand=True, padx=1, pady=1)
+        
+        # Main content frame
+        frame = tk.Frame(border_frame, bg="#4a90e2", bd=0)
+        frame.pack(side="top", fill="both", expand=True, padx=1, pady=1)
         
         # Configure internal grid
         frame.grid_rowconfigure(0, weight=0)
@@ -330,7 +359,7 @@ class WeatherApp:
                 day = forecast[i]['day']
                 icon = forecast[i]['icon']
                 # Format temperature with Fahrenheit for forecast
-                temp = f"{forecast[i]['high']}°F/{forecast[i]['low']}°F"
+                temp = f"L: {forecast[i]['low']}°F / H: {forecast[i]['high']}°F"
                 card[0].config(text=day)
                 card[1].config(text=icon)
                 card[2].config(text=temp)
@@ -360,6 +389,14 @@ class WeatherApp:
         try:
             data = load_weather_data()
             if data:
+                # Automatically fetch the latest forecast for the loaded city
+                try:
+                    forecast = fetch_5day_forecast(data['city'])
+                    data['forecast'] = forecast if forecast else []
+                except Exception as e:
+                    print(f"Forecast unavailable for last city: {e}")
+                    data['forecast'] = []
+                
                 self.display_weather(data)
         except Exception as e:
             print(f"Error loading last weather data: {e}")
@@ -413,16 +450,19 @@ class WeatherApp:
             messagebox.showinfo("No Favorites", "No favorite cities saved yet!")
             return
         
-        # Create a simple selection window
+        # Create a simple selection window with dark background
         favorites_window = tk.Toplevel(self.root)
         favorites_window.title("Favorite Cities")
         favorites_window.geometry("400x500")
-        favorites_window.configure(bg="#6db3f2")
+        favorites_window.configure(bg="#1a1a1a")  # Dark background
         
-        tk.Label(favorites_window, text="Favorite Cities", font=self.medium_font, bg="#6db3f2", fg="white").pack(pady=10)
+        tk.Label(favorites_window, text="Favorite Cities", font=self.medium_font, bg="#1a1a1a", fg="white").pack(pady=10)
         
-        # Create listbox for favorites
-        listbox = tk.Listbox(favorites_window, font=self.small_font, height=15)
+        # Create listbox for favorites with black gradient effect
+        listbox = tk.Listbox(favorites_window, font=self.small_font, height=15, 
+                            bg="#0d0d0d", fg="white", selectmode=tk.SINGLE,
+                            selectbackground="#FF6B47", selectforeground="white",
+                            relief="flat", bd=0)
         listbox.pack(fill="both", expand=True, padx=20, pady=10)
         
         # Add favorites to listbox
@@ -444,15 +484,19 @@ class WeatherApp:
                 messagebox.showwarning("No Selection", "Please select a city from the list!")
         
         # Create button frame
-        button_frame = tk.Frame(favorites_window, bg="#6db3f2")
+        button_frame = tk.Frame(favorites_window, bg="#1a1a1a")
         button_frame.pack(pady=10)
         
-        # Load button
-        load_btn = tk.Button(button_frame, text="Load Weather", command=load_selected_city, font=self.small_font)
+        # Load button - CustomTkinter rounded
+        load_btn = ctk.CTkButton(button_frame, text="Load Weather", command=load_selected_city, 
+                                fg_color="#47FF78", hover_color="#47FF78", text_color="white",
+                                corner_radius=12, font=("Helvetica", 14, "bold"))
         load_btn.pack(side=tk.LEFT, padx=5)
         
-        # Close button
-        close_btn = tk.Button(button_frame, text="Close", command=favorites_window.destroy, font=self.small_font)
+        # Close button - CustomTkinter rounded
+        close_btn = ctk.CTkButton(button_frame, text="Close", command=favorites_window.destroy,
+                                 fg_color="#ec0e0e", hover_color="#ec0e0e", text_color="white",
+                                 corner_radius=12, font=("Helvetica", 14, "bold"))
         close_btn.pack(side=tk.LEFT, padx=5)
 
     def right_frame_utilities(self):
@@ -960,71 +1004,12 @@ class WeatherApp:
             messagebox.showinfo("Already Added", f"📍 {current_city} is already in your favorites!")
     
     def create_add_favorites_button(self, parent):
-        """Create custom Add to Favorites button."""
-        button_frame = tk.Frame(parent, bg="#ff9500", relief="raised", bd=3, cursor="hand2")
-        
-        button_label = tk.Label(button_frame, text="➕ Add to Favorites", font=self.small_font,
-                               bg="#ff9500", fg="white", padx=10, pady=5)
-        button_label.pack()
-        
-        # Bind click events
-        def on_click(event):
-            self.add_current_city_to_favorites()
-        
-        def on_enter(event):
-            button_frame.config(relief="solid")
-        
-        def on_leave(event):
-            button_frame.config(relief="raised")
-        
-        button_frame.bind("<Button-1>", on_click)
-        button_label.bind("<Button-1>", on_click)
-        button_frame.bind("<Enter>", on_enter)
-        button_frame.bind("<Leave>", on_leave)
-        button_label.bind("<Enter>", on_enter)
-        button_label.bind("<Leave>", on_leave)
-        
-        return button_frame
-
+        """Create custom Add to Favorites button - deprecated, using CustomTkinter instead."""
+        pass
+    
     def create_custom_nav_button(self, parent, text, bg_color, fg_color, command):
-        """Create a custom styled navigation button."""
-        button_frame = tk.Frame(parent, bg=bg_color, relief="raised", bd=3, cursor="hand2")
-        
-        button_label = tk.Label(button_frame, text=text, font=self.small_font,
-                               bg=bg_color, fg=fg_color, padx=12, pady=6)
-        button_label.pack()
-        
-        # Bind click events
-        def on_click(event):
-            command()
-    
-        def on_enter(event):
-            button_frame.config(relief="solid", bd=4)  # Slightly thicker border on hover
-            button_label.config(bg=self.lighten_color(bg_color))
-    
-        def on_leave(event):
-            button_frame.config(relief="raised", bd=3)
-            button_label.config(bg=bg_color)
-    
-        button_frame.bind("<Button-1>", on_click)
-        button_label.bind("<Button-1>", on_click)
-        button_frame.bind("<Enter>", on_enter)
-        button_frame.bind("<Leave>", on_leave)
-        button_label.bind("<Enter>", on_enter)
-        button_label.bind("<Leave>", on_leave)
-        
-        return button_frame
-
-    def lighten_color(self, color):
-        """Lighten a hex color for hover effects."""
-        color_map = {
-            "#28a745": "#34ce57",  # Green -> lighter green
-            "#ffd700": "#ffe135",  # Gold -> lighter gold  
-            "#6c757d": "#8a929b",  # Gray -> lighter gray
-            "#007bff": "#3395ff",  # Blue -> lighter blue
-            "#ff9500": "#ffb333"   # Orange -> lighter orange
-        }
-        return color_map.get(color, color)
+        """Create a custom styled navigation button - deprecated, using CustomTkinter instead."""
+        pass
 #
 # Run the app if this file is executed directly
 if __name__ == "__main__":
